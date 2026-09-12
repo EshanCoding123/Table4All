@@ -306,6 +306,11 @@ p {
   text-align: center;
 }
 
+#login-view .section-heading h1,
+#signup-view .section-heading h1 {
+  margin-inline: auto;
+}
+
 .join-card {
   background: var(--secondary-surface);
 }

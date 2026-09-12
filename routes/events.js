@@ -59,6 +59,31 @@ function userIsHost(event, userId) {
   return event.host.toString() === userId.toString();
 }
 
+async function removeUserFromEventRoom(req, event, userId) {
+  const io = req.app?.get?.("io");
+  if (!io) return;
+
+  try {
+    const roomName = `event:${event._id}`;
+    const sockets = await io.in(roomName).fetchSockets();
+
+    await Promise.all(
+      sockets
+        .filter((socket) => socket.data.userId === userId.toString())
+        .map(async (socket) => {
+          socket.emit("membership:removed", { code: event.code });
+          await socket.leave(roomName);
+          socket.data.eventId = null;
+          socket.data.eventCode = null;
+          socket.data.roomName = null;
+          socket.data.role = null;
+        })
+    );
+  } catch (error) {
+    console.error("Remove member from chat error:", error.name);
+  }
+}
+
 function formatDish(dish) {
   return {
     id: dish._id,
@@ -303,6 +328,89 @@ router.post("/:code/join", requireUser, async (req, res) => {
     res.status(500).json({
       message: "The event could not be joined.",
     });
+  }
+});
+
+/*
+Leave an event as the signed-in member
+DELETE /api/events/:code/members/me
+*/
+router.delete("/:code/members/me", requireUser, async (req, res) => {
+  try {
+    const code = req.params.code.trim().toUpperCase();
+    const event = await Event.findOne({ code });
+
+    if (!event) {
+      return res.status(404).json({ message: "Event not found." });
+    }
+
+    const membership = findMembership(event, req.session.userId);
+
+    if (!membership) {
+      return res.status(403).json({ message: "You are not a member of this event." });
+    }
+
+    if (membership.role === "host" || userIsHost(event, req.session.userId)) {
+      return res.status(403).json({
+        message: "The event host cannot leave their own event.",
+      });
+    }
+
+    const memberIndex = event.members.indexOf(membership);
+    event.members.splice(memberIndex, 1);
+    await event.save();
+    await removeUserFromEventRoom(req, event, req.session.userId);
+
+    res.json({ message: "You left the event." });
+  } catch (error) {
+    console.error("Leave event error:", error.name);
+    res.status(500).json({ message: "The event could not be left." });
+  }
+});
+
+/*
+Remove a member as the event host
+DELETE /api/events/:code/members/:memberId
+*/
+router.delete("/:code/members/:memberId", requireUser, async (req, res) => {
+  try {
+    const code = req.params.code.trim().toUpperCase();
+    const event = await Event.findOne({ code });
+
+    if (!event) {
+      return res.status(404).json({ message: "Event not found." });
+    }
+
+    if (!userIsHost(event, req.session.userId)) {
+      return res.status(403).json({
+        message: "Only the host can remove event members.",
+      });
+    }
+
+    const membership = findMembership(event, req.params.memberId);
+
+    if (!membership) {
+      return res.status(404).json({ message: "Event member not found." });
+    }
+
+    if (membership.role === "host" || userIsHost(event, membership.user)) {
+      return res.status(400).json({
+        message: "The event host cannot be removed.",
+      });
+    }
+
+    const memberIndex = event.members.indexOf(membership);
+    event.members.splice(memberIndex, 1);
+    await event.save();
+    await removeUserFromEventRoom(req, event, membership.user);
+
+    res.json({
+      message: "Member removed from the event.",
+      event: formatEvent(event, req.session.userId),
+    });
+  } catch (error) {
+    console.error("Remove event member error:", error.name);
+    res.status(500).json({ message: "The member could not be removed." });
   }
 });
 

@@ -115,6 +115,7 @@ const httpServer = http.createServer(app);
 const io = new Server(httpServer, {
   maxHttpBufferSize: 20 * 1024,
 });
+app.set("io", io);
 
 // Socket.IO and Express resolve the same signed, Mongo-backed session.
 io.engine.use(sessionMiddleware);

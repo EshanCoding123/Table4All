@@ -101,6 +101,7 @@ const memberPortalMessage = document.querySelector("#member-portal-message");
 const editMemberProfileButton = document.querySelector("#edit-member-profile-button");
 const cancelMemberProfileButton = document.querySelector("#cancel-member-profile-button");
 const refreshMemberMealsButton = document.querySelector("#refresh-member-meals-button");
+const leaveEventButton = document.querySelector("#leave-event-button");
 const refreshMenuAnalysisButton = document.querySelector("#refresh-menu-analysis-button");
 const menuCoverageResults = document.querySelector("#menu-coverage-results");
 const menuCoverageMessage = document.querySelector("#menu-coverage-message");
@@ -1099,6 +1100,38 @@ function renderHostMembers(event) {
       );
     }
 
+    if (member.role === "member") {
+      const removeButton = document.createElement("button");
+      removeButton.className = "danger-button member-remove-button";
+      removeButton.type = "button";
+      removeButton.textContent = "Remove member";
+      removeButton.addEventListener("click", async () => {
+        const confirmed = window.confirm(
+          `Remove ${member.displayName} from this event?`
+        );
+        if (!confirmed || !activeEvent || removeButton.disabled) return;
+
+        const eventCode = activeEvent.code;
+        setButtonLoading(removeButton, true, "Removing...");
+
+        try {
+          const data = await apiRequest(
+            `/api/events/${eventCode}/members/${encodeURIComponent(member.id)}`,
+            { method: "DELETE" }
+          );
+          if (activeEvent?.code !== eventCode || activeEvent.role !== "host") return;
+          showHostPortal(data.event);
+          activatePortalSection("host", "host-members-panel");
+          showHostMessage(data.message, "success");
+        } catch (error) {
+          showHostMessage(error.message, "error");
+          setButtonLoading(removeButton, false);
+        }
+      });
+
+      memberCard.append(removeButton);
+    }
+
     hostMembersList.append(memberCard);
   });
 }
@@ -1409,6 +1442,15 @@ if (roomSocket) {
     renderChatMessages();
     chatElements[chatContext.role].live.textContent = "A room message was deleted.";
   });
+  roomSocket.on("membership:removed", ({ code }) => {
+    if (activeEvent?.role !== "member" || activeEvent.code !== code) return;
+    sessionStorage.removeItem("tableForAllCurrentEvent");
+    activeEvent = null;
+    closeRoomChat();
+    showView("role-view");
+    loadMyEvents();
+    showMessage("You were removed from the event.", "warning");
+  });
 }
 
 Object.values(chatElements).forEach((elements) => {
@@ -1710,6 +1752,34 @@ editMemberProfileButton.addEventListener("click", () => {
 
 cancelMemberProfileButton.addEventListener("click", () => {
   if (activeEvent?.role === "member") showMemberPortal(activeEvent);
+});
+
+leaveEventButton.addEventListener("click", async () => {
+  if (activeEvent?.role !== "member" || leaveEventButton.disabled) return;
+
+  const confirmed = window.confirm(
+    `Leave ${activeEvent.name}? You can rejoin later while the event is open.`
+  );
+  if (!confirmed) return;
+
+  const eventCode = activeEvent.code;
+  setButtonLoading(leaveEventButton, true, "Leaving...");
+
+  try {
+    const data = await apiRequest(`/api/events/${eventCode}/members/me`, {
+      method: "DELETE",
+    });
+    sessionStorage.removeItem("tableForAllCurrentEvent");
+    activeEvent = null;
+    closeRoomChat();
+    showView("role-view");
+    loadMyEvents();
+    showMessage(data.message, "success");
+  } catch (error) {
+    showMemberMessage(error.message, "error");
+  } finally {
+    setButtonLoading(leaveEventButton, false);
+  }
 });
 
 memberProfileForm.addEventListener("submit", async (event) => {

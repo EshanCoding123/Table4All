@@ -1341,8 +1341,13 @@ verificationForm.addEventListener("submit", async (event) => {
         }
       );
 
-      if (joinedEvent.event.role === "host") showHostPortal(joinedEvent.event);
-      else showMemberPortal(joinedEvent.event);
+      if (joinedEvent.event.role !== "member") {
+        throw new Error(
+          "This email belongs to the event host. Sign out and use a different verified email to join as a member."
+        );
+      }
+
+      showMemberPortal(joinedEvent.event);
     }
   } catch (error) {
     showMessage(error.message);

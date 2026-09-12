@@ -270,6 +270,12 @@ router.post("/:code/join", requireUser, async (req, res) => {
       });
     }
 
+    if (userIsHost(event, user._id)) {
+      return res.status(409).json({
+        message: "This email belongs to the event host. Sign out and use a different verified email to join as a member.",
+      });
+    }
+
     const existingMembership = findMembership(event, user._id);
 
     if (!existingMembership) {

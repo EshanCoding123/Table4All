@@ -295,7 +295,15 @@ p {
 }
 
 .account-form-card {
+  width: min(100%, 720px);
+  margin-inline: auto;
   max-width: 720px;
+}
+
+#login-view .section-heading,
+#signup-view .section-heading {
+  margin-inline: auto;
+  text-align: center;
 }
 
 .join-card {

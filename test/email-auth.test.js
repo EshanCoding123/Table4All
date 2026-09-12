@@ -340,6 +340,34 @@ test("login sends a code only for an existing verified account", async () => {
   assert.equal(created.intent, "login");
 });
 
+test("login cannot create or authenticate an unknown account", async () => {
+  let codesCreated = 0;
+  let emailsSent = 0;
+  const router = createAuthRouter({
+    UserModel: { findOne: async () => null },
+    VerificationCodeModel: {
+      findOne: async () => null,
+      deleteMany: async () => {},
+      create: async () => { codesCreated += 1; },
+    },
+    emailService: {
+      sendVerificationCode: async () => { emailsSent += 1; },
+    },
+    sessionSecret: "test-session-secret",
+  });
+  const res = responseRecorder();
+
+  await authHandler(router, "/request-code")({
+    body: { email: "unknown@example.test", intent: "login" },
+    ip: "203.0.113.4",
+  }, res);
+
+  assert.equal(res.statusCode, 404);
+  assert.match(res.body.message, /no verified account/i);
+  assert.equal(codesCreated, 0);
+  assert.equal(emailsSent, 0);
+});
+
 test("signup directs an existing verified account to log in", async () => {
   const router = createAuthRouter({
     UserModel: {
@@ -431,4 +459,61 @@ test("a valid signup code creates the verified account session", async () => {
   assert.equal(session.userId, "user-1");
   assert.equal(session.email, verification.email);
   assert.equal(setup.deleted(), 1);
+});
+
+test("login rejects a failed CAPTCHA before checking the account", async () => {
+  let accountLookups = 0;
+  const router = createAuthRouter({
+    UserModel: {
+      findOne: async () => { accountLookups += 1; },
+    },
+    captchaService: {
+      configured: true,
+      required: true,
+      siteKey: "public-site-key",
+      verify: async () => ({ success: false }),
+    },
+    emailService: { sendVerificationCode: async () => {} },
+    sessionSecret: "test-session-secret",
+  });
+  const res = responseRecorder();
+
+  await authHandler(router, "/request-code")({
+    body: {
+      email: "member@example.test",
+      intent: "login",
+      captchaToken: "invalid-token",
+    },
+    ip: "203.0.113.4",
+  }, res);
+
+  assert.equal(res.statusCode, 400);
+  assert.equal(res.body.captchaFailed, true);
+  assert.equal(accountLookups, 0);
+});
+
+test("auth config exposes only the public CAPTCHA key", async () => {
+  const router = createAuthRouter({
+    captchaService: {
+      configured: true,
+      required: true,
+      siteKey: "public-site-key",
+      verify: async () => ({ success: true }),
+    },
+    emailService: { sendVerificationCode: async () => {} },
+    sessionSecret: "test-session-secret",
+  });
+  const res = responseRecorder();
+
+  await authHandler(router, "/config")({}, res);
+
+  assert.deepEqual(res.body, {
+    captcha: {
+      enabled: true,
+      required: true,
+      siteKey: "public-site-key",
+    },
+  });
+  assert.doesNotMatch(JSON.stringify(res.body), /secret/i);
+  assert.equal(res.headers["Cache-Control"], "no-store");
 });

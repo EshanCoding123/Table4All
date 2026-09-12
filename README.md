@@ -4,6 +4,10 @@ TableForAll is an Express and MongoDB application for planning event meals aroun
 
 Authentication is passwordless. New users choose **Sign up** and confirm a six-digit email code; returning users choose **Log in** and receive a new code. After signing in, users can create an event, join with an event code, or reopen an event from **Your events**.
 
+Login and sign-up can be protected with Cloudflare Turnstile. Create a Turnstile widget for the deployed hostname, then set `TURNSTILE_SITE_KEY` and `TURNSTILE_SECRET_KEY` in the deployment environment. Once both keys are present, CAPTCHA validation is enforced automatically. Set `CAPTCHA_REQUIRED=true` after adding both keys to make a missing or partial configuration fail closed. Keep the secret key on the server and never commit it.
+
+Account-code endpoints also limit requests by IP address and normalized email. Verification codes are HMAC-hashed, expire after ten minutes, become invalid after five incorrect attempts, and are removed after use. Successful authentication regenerates the session identifier.
+
 ## Local setup
 
 1. Install Node.js and make a MongoDB deployment available.

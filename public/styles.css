@@ -311,6 +311,17 @@ p {
   margin-inline: auto;
 }
 
+.captcha-container {
+  width: 100%;
+  min-height: 70px;
+  margin: 4px 0 20px;
+  overflow: hidden;
+}
+
+.captcha-container iframe {
+  max-width: 100%;
+}
+
 .join-card {
   background: var(--secondary-surface);
 }

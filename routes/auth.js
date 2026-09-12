@@ -5,6 +5,12 @@ const User = require("../models/User");
 const Event = require("../models/Event");
 const VerificationCode = require("../models/VerificationCode");
 const {
+  CaptchaConfigurationError,
+  CaptchaVerificationError,
+  createCaptchaService,
+} = require("../lib/captcha");
+const { createRateLimiter } = require("../lib/rateLimiter");
+const {
   EmailConfigurationError,
   EmailDeliveryError,
   createEmailService,
@@ -14,6 +20,7 @@ const CODE_LIFETIME_MS = 10 * 60 * 1000;
 const RESEND_COOLDOWN_MS = 60 * 1000;
 const MAX_ATTEMPTS = 5;
 const AUTH_INTENTS = ["host", "join", "signup", "login"];
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 
 function normalizeEmail(email) {
   return String(email || "").trim().toLowerCase();
@@ -31,6 +38,10 @@ function hashVerificationCode(email, code, secret = process.env.SESSION_SECRET) 
   return crypto.createHmac("sha256", secret).update(`${email}:${code}`).digest("hex");
 }
 
+function rateLimitKey(value) {
+  return crypto.createHash("sha256").update(String(value || "unknown")).digest("hex");
+}
+
 function createAuthRouter(options = {}) {
   const router = express.Router();
   const emailService = options.emailService || createEmailService();
@@ -39,6 +50,31 @@ function createAuthRouter(options = {}) {
   const VerificationCodeModel = options.VerificationCodeModel || VerificationCode;
   const now = options.now || (() => new Date());
   const sessionSecret = options.sessionSecret || process.env.SESSION_SECRET;
+  const captchaService = options.captchaService || createCaptchaService({
+    environment: options.environment || process.env,
+    fetchImpl: options.fetchImpl,
+  });
+  const requestIpLimiter = options.requestIpLimiter || createRateLimiter({
+    limit: 20,
+    windowMs: RATE_LIMIT_WINDOW_MS,
+    now: () => now().getTime(),
+  });
+  const requestEmailLimiter = options.requestEmailLimiter || createRateLimiter({
+    limit: 5,
+    windowMs: RATE_LIMIT_WINDOW_MS,
+    now: () => now().getTime(),
+  });
+
+  router.get("/config", (req, res) => {
+    res.set("Cache-Control", "no-store");
+    return res.json({
+      captcha: {
+        enabled: captchaService.configured,
+        required: captchaService.required,
+        siteKey: captchaService.siteKey,
+      },
+    });
+  });
 
   router.post("/request-code", async (req, res) => {
     let verification;
@@ -55,6 +91,42 @@ function createAuthRouter(options = {}) {
       }
       if (intent !== "login" && !name) {
         return res.status(400).json({ message: "A valid name and email are required." });
+      }
+
+      if (AUTH_INTENTS.includes(intent)) {
+        const ipResult = requestIpLimiter.consume(
+          rateLimitKey(`ip:${req.ip || req.socket?.remoteAddress || "unknown"}`)
+        );
+        if (!ipResult.allowed) {
+          res.set("Retry-After", String(ipResult.retryAfterSeconds));
+          return res.status(429).json({
+            message: "Too many account requests. Please wait before trying again.",
+            retryAfterSeconds: ipResult.retryAfterSeconds,
+          });
+        }
+
+        const captchaResult = await captchaService.verify(
+          req.body.captchaToken,
+          req.ip || req.socket?.remoteAddress,
+          intent
+        );
+        if (!captchaResult.success) {
+          return res.status(400).json({
+            message: "Complete the security check and try again.",
+            captchaFailed: true,
+          });
+        }
+
+        const emailResult = requestEmailLimiter.consume(
+          rateLimitKey(`email:${email}`)
+        );
+        if (!emailResult.allowed) {
+          res.set("Retry-After", String(emailResult.retryAfterSeconds));
+          return res.status(429).json({
+            message: "Too many account requests. Please wait before trying again.",
+            retryAfterSeconds: emailResult.retryAfterSeconds,
+          });
+        }
       }
 
       if (intent === "login") {
@@ -131,6 +203,16 @@ function createAuthRouter(options = {}) {
       if (error instanceof EmailDeliveryError) {
         return res.status(502).json({
           message: "The verification email could not be delivered. Check the address and try again.",
+        });
+      }
+      if (error instanceof CaptchaConfigurationError) {
+        return res.status(503).json({
+          message: "The account security check is not configured yet.",
+        });
+      }
+      if (error instanceof CaptchaVerificationError) {
+        return res.status(503).json({
+          message: "The security check is temporarily unavailable. Please try again.",
         });
       }
       if (error?.code === 11000) {
@@ -239,4 +321,9 @@ module.exports = router;
 module.exports.createAuthRouter = createAuthRouter;
 module.exports.hashVerificationCode = hashVerificationCode;
 module.exports.normalizeEmail = normalizeEmail;
-module.exports.constants = { CODE_LIFETIME_MS, RESEND_COOLDOWN_MS, MAX_ATTEMPTS };
+module.exports.constants = {
+  CODE_LIFETIME_MS,
+  RESEND_COOLDOWN_MS,
+  MAX_ATTEMPTS,
+  RATE_LIMIT_WINDOW_MS,
+};

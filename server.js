@@ -16,9 +16,38 @@ const { createChatService } = require("./services/chatService");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+app.disable("x-powered-by");
+
 if (process.env.NODE_ENV === "production") {
   app.set("trust proxy", 1);
 }
+
+app.use((req, res, next) => {
+  res.set({
+    "Content-Security-Policy": [
+      "default-src 'self'",
+      "script-src 'self' https://challenges.cloudflare.com",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data:",
+      "connect-src 'self' wss: ws://localhost:* ws://127.0.0.1:* https://challenges.cloudflare.com",
+      "frame-src https://challenges.cloudflare.com",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "frame-ancestors 'none'",
+    ].join("; "),
+    "Referrer-Policy": "no-referrer",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+  });
+
+  if (process.env.NODE_ENV === "production") {
+    res.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  }
+
+  next();
+});
 
 app.use(
   express.json({
@@ -41,11 +70,17 @@ const sessionMiddleware = session({
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
+    priority: "high",
     maxAge: 7 * 24 * 60 * 60 * 1000,
   },
 });
 
 app.use(sessionMiddleware);
+
+app.use("/api", (req, res, next) => {
+  res.set("Cache-Control", "no-store");
+  next();
+});
 
 app.use("/api/auth", authRoutes);
 app.use("/api/events", assistantRoutes);

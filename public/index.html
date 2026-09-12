@@ -124,6 +124,9 @@
                 required
               />
             </div>
+            <div class="captcha-container" id="login-captcha" hidden>
+              <p class="field-help">Loading security check…</p>
+            </div>
             <button class="primary-button" type="submit">Send login code</button>
           </form>
           <button class="secondary-button back-button" type="button" data-back-view="account-view">
@@ -163,6 +166,9 @@
                 autocomplete="email"
                 required
               />
+            </div>
+            <div class="captcha-container" id="signup-captcha" hidden>
+              <p class="field-help">Loading security check…</p>
             </div>
             <button class="primary-button" type="submit">Create account</button>
           </form>
@@ -406,6 +412,10 @@
               Confirm email
             </button>
           </form>
+
+          <div class="captcha-container" id="verification-captcha" hidden>
+            <p class="field-help">Complete the security check to request another code.</p>
+          </div>
 
           <button
             class="secondary-button"

@@ -17,6 +17,11 @@ const signupForm = document.querySelector("#signup-form");
 const joinEventForm = document.querySelector("#join-event-form");
 const joinEventCodeInput = document.querySelector("#join-event-code");
 const yourEventsList = document.querySelector("#your-events-list");
+const captchaContainers = {
+  login: document.querySelector("#login-captcha"),
+  signup: document.querySelector("#signup-captcha"),
+  verification: document.querySelector("#verification-captcha"),
+};
 
 const hostLoginForm = document.querySelector("#host-login-form");
 const memberLoginForm = document.querySelector(
@@ -132,6 +137,15 @@ let assistantConfigured = false;
 let chatContext = null;
 let chatMessages = [];
 let chatCurrentUserId = null;
+let captchaInitializationPromise = null;
+const captchaState = {
+  enabled: false,
+  required: false,
+  siteKey: null,
+  tokens: { login: "", signup: "", verification: "" },
+  widgetIds: {},
+  widgetActions: {},
+};
 const roomSocket = typeof window.io === "function"
   ? window.io({ autoConnect: false })
   : null;
@@ -251,6 +265,112 @@ async function apiRequest(url, options = {}) {
   }
 
   return data;
+}
+
+function loadTurnstileScript() {
+  if (window.turnstile) return Promise.resolve();
+
+  return new Promise((resolve, reject) => {
+    const existingScript = document.querySelector("script[data-turnstile-script]");
+    const script = existingScript || document.createElement("script");
+
+    script.addEventListener("load", () => {
+      if (!window.turnstile) {
+        reject(new Error("The security check did not load."));
+        return;
+      }
+      window.turnstile.ready(resolve);
+    }, { once: true });
+    script.addEventListener("error", () => {
+      reject(new Error("The security check did not load."));
+    }, { once: true });
+
+    if (!existingScript) {
+      script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+      script.async = true;
+      script.defer = true;
+      script.dataset.turnstileScript = "true";
+      document.head.append(script);
+    }
+  });
+}
+
+async function initializeCaptcha() {
+  const data = await apiRequest("/api/auth/config");
+  captchaState.enabled = data.captcha?.enabled === true;
+  captchaState.required = data.captcha?.required === true;
+  captchaState.siteKey = data.captcha?.siteKey || null;
+
+  if (captchaState.required && !captchaState.enabled) {
+    throw new Error("The account security check is not configured yet.");
+  }
+
+  if (captchaState.enabled) await loadTurnstileScript();
+}
+
+async function ensureCaptcha(kind, action = kind) {
+  try {
+    await captchaInitializationPromise;
+  } catch (error) {
+    showMessage(error.message);
+    return false;
+  }
+
+  if (!captchaState.enabled) return true;
+  if (
+    captchaState.widgetIds[kind] !== undefined &&
+    captchaState.widgetActions[kind] === action
+  ) {
+    return true;
+  }
+
+  if (captchaState.widgetIds[kind] !== undefined) {
+    window.turnstile.remove(captchaState.widgetIds[kind]);
+    delete captchaState.widgetIds[kind];
+    captchaState.tokens[kind] = "";
+  }
+
+  const container = captchaContainers[kind];
+  container.hidden = false;
+  container.replaceChildren();
+
+  captchaState.widgetIds[kind] = window.turnstile.render(container, {
+    sitekey: captchaState.siteKey,
+    action,
+    size: window.matchMedia("(max-width: 370px)").matches
+      ? "compact"
+      : "normal",
+    theme: "light",
+    callback(token) {
+      captchaState.tokens[kind] = token;
+    },
+    "expired-callback"() {
+      captchaState.tokens[kind] = "";
+    },
+    "error-callback"() {
+      captchaState.tokens[kind] = "";
+      return true;
+    },
+  });
+  captchaState.widgetActions[kind] = action;
+
+  return true;
+}
+
+function getCaptchaToken(kind) {
+  if (!captchaState.enabled) return "";
+  if (!captchaState.tokens[kind]) {
+    throw new Error("Complete the security check before continuing.");
+  }
+  return captchaState.tokens[kind];
+}
+
+function resetCaptcha(kind) {
+  captchaState.tokens[kind] = "";
+  const widgetId = captchaState.widgetIds[kind];
+  if (widgetId !== undefined && window.turnstile) {
+    window.turnstile.reset(widgetId);
+  }
 }
 
 function savePendingAuthentication(authentication) {
@@ -477,11 +597,13 @@ async function requestVerification(authentication) {
     throw error;
   }
 
-  savePendingAuthentication(authentication);
+  const { captchaToken, ...pendingAuthenticationDetails } = authentication;
+  savePendingAuthentication(pendingAuthenticationDetails);
   showView("verification-view");
   verificationInstructions.textContent =
     "Check your email for the six-digit confirmation code. It expires in 10 minutes.";
   startResendCooldown(data.cooldownSeconds || 60);
+  ensureCaptcha("verification", pendingAuthenticationDetails.intent);
 
   showMessage(data.message, "success");
 }
@@ -1339,10 +1461,12 @@ refreshMemberMealsButton.addEventListener("click", async () => {
 
 chooseLoginButton.addEventListener("click", () => {
   showView("login-view");
+  ensureCaptcha("login");
 });
 
 chooseSignupButton.addEventListener("click", () => {
   showView("signup-view");
+  ensureCaptcha("signup");
 });
 
 chooseHostButton.addEventListener("click", () => {
@@ -1382,17 +1506,20 @@ loginForm.addEventListener("submit", async (event) => {
 
   const button = loginForm.querySelector('button[type="submit"]');
   const formData = new FormData(loginForm);
-  const authentication = {
-    email: formData.get("email").trim().toLowerCase(),
-    intent: "login",
-  };
 
   setButtonLoading(button, true, "Sending login code...");
   try {
+    if (!(await ensureCaptcha("login"))) return;
+    const authentication = {
+      email: formData.get("email").trim().toLowerCase(),
+      intent: "login",
+      captchaToken: getCaptchaToken("login"),
+    };
     await requestVerification(authentication);
   } catch (error) {
     showMessage(error.message);
   } finally {
+    resetCaptcha("login");
     setButtonLoading(button, false);
   }
 });
@@ -1403,18 +1530,21 @@ signupForm.addEventListener("submit", async (event) => {
 
   const button = signupForm.querySelector('button[type="submit"]');
   const formData = new FormData(signupForm);
-  const authentication = {
-    name: formData.get("name").trim(),
-    email: formData.get("email").trim().toLowerCase(),
-    intent: "signup",
-  };
 
   setButtonLoading(button, true, "Creating account...");
   try {
+    if (!(await ensureCaptcha("signup"))) return;
+    const authentication = {
+      name: formData.get("name").trim(),
+      email: formData.get("email").trim().toLowerCase(),
+      intent: "signup",
+      captchaToken: getCaptchaToken("signup"),
+    };
     await requestVerification(authentication);
   } catch (error) {
     showMessage(error.message);
   } finally {
+    resetCaptcha("signup");
     setButtonLoading(button, false);
   }
 });
@@ -1601,10 +1731,15 @@ resendCodeButton.addEventListener("click", async () => {
   );
 
   try {
-    await requestVerification(pendingAuthentication);
+    if (!(await ensureCaptcha("verification", pendingAuthentication.intent))) return;
+    await requestVerification({
+      ...pendingAuthentication,
+      captchaToken: getCaptchaToken("verification"),
+    });
   } catch (error) {
     showMessage(error.message);
   } finally {
+    resetCaptcha("verification");
     setButtonLoading(resendCodeButton, false);
     updateResendCooldown();
   }
@@ -1860,6 +1995,8 @@ signOutButton.addEventListener("click", async () => {
 });
 
 setDefaultEventDate();
+captchaInitializationPromise = initializeCaptcha();
+captchaInitializationPromise.catch(() => {});
 showStartupScreen();
 restoreApplication();
 window.setInterval(() => refreshMenuOptimization(true), 30000);

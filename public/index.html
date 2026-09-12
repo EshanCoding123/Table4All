@@ -73,14 +73,113 @@
         aria-live="polite"
       ></p>
 
-      <!-- Choose whether to host or join. -->
-      <section class="app-view hero" id="role-view">
+      <!-- Account entry point. -->
+      <section class="app-view hero" id="account-view">
+        <div class="hero-copy">
+          <p class="eyebrow">Welcome to TableForAll</p>
+          <h1>Plan shared meals with confidence.</h1>
+          <p class="hero-description">
+            Log in to return to your events, or create a free account
+            with your email address.
+          </p>
+        </div>
+
+        <div class="event-actions">
+          <article class="form-card">
+            <h2>Log in</h2>
+            <p>We will email you a secure six-digit login code.</p>
+            <button class="primary-button" id="choose-login-button" type="button">
+              Log in
+            </button>
+          </article>
+
+          <article class="form-card join-card">
+            <h2>Create account</h2>
+            <p>Sign up with your name and email. No password is required.</p>
+            <button class="primary-button" id="choose-signup-button" type="button">
+              Sign up
+            </button>
+          </article>
+        </div>
+      </section>
+
+      <!-- Existing users request a password-free login code. -->
+      <section class="app-view hidden" id="login-view">
+        <div class="section-heading">
+          <p class="eyebrow">Welcome back</p>
+          <h1>Log in to TableForAll.</h1>
+          <p>We will send a six-digit code to your verified email address.</p>
+        </div>
+
+        <section class="form-card account-form-card">
+          <form id="login-form">
+            <div class="form-group">
+              <label for="login-email">Email address</label>
+              <input
+                id="login-email"
+                name="email"
+                type="email"
+                maxlength="254"
+                autocomplete="email"
+                required
+              />
+            </div>
+            <button class="primary-button" type="submit">Send login code</button>
+          </form>
+          <button class="secondary-button back-button" type="button" data-back-view="account-view">
+            Back
+          </button>
+        </section>
+      </section>
+
+      <!-- New users create and verify an account. -->
+      <section class="app-view hidden" id="signup-view">
+        <div class="section-heading">
+          <p class="eyebrow">Create account</p>
+          <h1>Join TableForAll.</h1>
+          <p>Your email is verified before your account is created.</p>
+        </div>
+
+        <section class="form-card account-form-card">
+          <form id="signup-form">
+            <div class="form-group">
+              <label for="signup-name">Your name</label>
+              <input
+                id="signup-name"
+                name="name"
+                type="text"
+                maxlength="50"
+                autocomplete="name"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="signup-email">Email address</label>
+              <input
+                id="signup-email"
+                name="email"
+                type="email"
+                maxlength="254"
+                autocomplete="email"
+                required
+              />
+            </div>
+            <button class="primary-button" type="submit">Create account</button>
+          </form>
+          <button class="secondary-button back-button" type="button" data-back-view="account-view">
+            Back
+          </button>
+        </section>
+      </section>
+
+      <!-- Choose whether to host or join after signing in. -->
+      <section class="app-view hero hidden" id="role-view">
         <div class="hero-copy">
           <p class="eyebrow">
-            Food allergy planning for shared meals
+            You are signed in
           </p>
 
-          <h1>Plan a meal that includes everyone.</h1>
+          <h1>What would you like to do?</h1>
 
           <p class="hero-description">
             Create a shared meal, collect allergy information, and
@@ -121,6 +220,14 @@
             >
               Join an event
             </button>
+          </article>
+
+          <article class="form-card your-events-card" id="your-events-card">
+            <h2>Your events</h2>
+            <p>Open an event you already host or joined.</p>
+            <div class="your-events-list" id="your-events-list">
+              <p>Loading your events…</p>
+            </div>
           </article>
         </div>
       </section>
@@ -227,6 +334,38 @@
           </form>
 
           <button class="secondary-button back-button" type="button">
+            Back
+          </button>
+        </section>
+      </section>
+
+      <!-- A signed-in user joins with the invitation code. -->
+      <section class="app-view hidden" id="join-event-view">
+        <div class="section-heading">
+          <p class="eyebrow">Join an event</p>
+          <h1>Enter your event code.</h1>
+          <p>You will go directly to the Member Portal after joining.</p>
+        </div>
+
+        <section class="form-card account-form-card">
+          <form id="join-event-form">
+            <div class="form-group">
+              <label for="join-event-code">Event code</label>
+              <input
+                id="join-event-code"
+                name="eventCode"
+                type="text"
+                minlength="6"
+                maxlength="6"
+                autocomplete="off"
+                autocapitalize="characters"
+                spellcheck="false"
+                required
+              />
+            </div>
+            <button class="primary-button" type="submit">Join event</button>
+          </form>
+          <button class="secondary-button back-button" type="button" data-back-view="role-view">
             Back
           </button>
         </section>

@@ -13,6 +13,7 @@ const {
 const CODE_LIFETIME_MS = 10 * 60 * 1000;
 const RESEND_COOLDOWN_MS = 60 * 1000;
 const MAX_ATTEMPTS = 5;
+const AUTH_INTENTS = ["host", "join", "signup", "login"];
 
 function normalizeEmail(email) {
   return String(email || "").trim().toLowerCase();
@@ -42,15 +43,33 @@ function createAuthRouter(options = {}) {
   router.post("/request-code", async (req, res) => {
     let verification;
     try {
-      const name = String(req.body.name || "").trim().slice(0, 50);
+      let name = String(req.body.name || "").trim().slice(0, 50);
       const email = normalizeEmail(req.body.email);
       const intent = req.body.intent;
       const eventCode = normalizeEventCode(req.body.eventCode);
-      if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return res.status(400).json({ message: "A valid email address is required." });
+      }
+      if (!AUTH_INTENTS.includes(intent)) {
+        return res.status(400).json({ message: "Please choose a valid sign-in action." });
+      }
+      if (intent !== "login" && !name) {
         return res.status(400).json({ message: "A valid name and email are required." });
       }
-      if (!["host", "join"].includes(intent)) {
-        return res.status(400).json({ message: "Please choose whether you are hosting or joining." });
+
+      if (intent === "login") {
+        const existingUser = await UserModel.findOne({ email });
+        if (!existingUser?.emailVerified) {
+          return res.status(404).json({ message: "No verified account was found for that email. Choose Create account first." });
+        }
+        name = existingUser.name;
+      }
+
+      if (intent === "signup") {
+        const existingUser = await UserModel.findOne({ email });
+        if (existingUser?.emailVerified) {
+          return res.status(409).json({ message: "An account already exists for that email. Choose Log in instead." });
+        }
       }
       if (intent === "join") {
         if (!/^[A-Z0-9]{6}$/.test(eventCode)) {
@@ -131,7 +150,7 @@ function createAuthRouter(options = {}) {
       const code = String(req.body.code || "").trim();
       const intent = req.body.intent;
       const eventCode = normalizeEventCode(req.body.eventCode);
-      if (!email || !/^\d{6}$/.test(code) || !["host", "join"].includes(intent)) {
+      if (!email || !/^\d{6}$/.test(code) || !AUTH_INTENTS.includes(intent)) {
         return res.status(400).json({ message: "Enter the six-digit verification code." });
       }
       const verification = await VerificationCodeModel.findOne({
@@ -164,11 +183,18 @@ function createAuthRouter(options = {}) {
         });
       }
 
-      const user = await UserModel.findOneAndUpdate(
-        { email },
-        { $set: { name: verification.name, emailVerified: true, verifiedAt: now() } },
-        { returnDocument: "after", upsert: true, runValidators: true, setDefaultsOnInsert: true }
-      );
+      const user = intent === "login"
+        ? await UserModel.findOne({ email })
+        : await UserModel.findOneAndUpdate(
+          { email },
+          { $set: { name: verification.name, emailVerified: true, verifiedAt: now() } },
+          { returnDocument: "after", upsert: true, runValidators: true, setDefaultsOnInsert: true }
+        );
+
+      if (intent === "login" && !user?.emailVerified) {
+        await VerificationCodeModel.findByIdAndDelete(verification._id);
+        return res.status(400).json({ message: "That account is no longer available. Create an account again." });
+      }
       await VerificationCodeModel.findByIdAndDelete(verification._id);
       await new Promise((resolve, reject) => {
         req.session.regenerate((error) => error ? reject(error) : resolve());

@@ -301,9 +301,11 @@ textarea {
 
 input[type="date"] {
   display: block;
+  box-sizing: border-box;
   inline-size: 100%;
   min-inline-size: 0;
   max-inline-size: 100%;
+  margin: 0;
 }
 
 input::placeholder {
@@ -1110,6 +1112,14 @@ footer p {
 }
 
 @media (max-width: 700px) {
+  input[type="date"] {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
   .site-header {
     align-items: center;
     flex-direction: column;

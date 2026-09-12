@@ -1,4 +1,5 @@
 const appMessage = document.querySelector("#app-message");
+const startupScreen = document.querySelector("#startup-screen");
 const homeButton = document.querySelector("#home-button");
 const signOutButton = document.querySelector("#sign-out-button");
 
@@ -127,6 +128,32 @@ const roomSocket = typeof window.io === "function"
   : null;
 
 let pendingAuthentication = loadPendingAuthentication();
+
+function finishStartup() {
+  document.body.classList.remove("app-starting");
+
+  if (!startupScreen) return;
+
+  startupScreen.classList.add("startup-screen-hidden");
+
+  window.setTimeout(() => {
+    startupScreen.hidden = true;
+  }, 350);
+}
+
+function showStartupScreen() {
+  const isMobile = window.matchMedia("(max-width: 700px)").matches;
+  const reduceMotion = window.matchMedia(
+    "(prefers-reduced-motion: reduce)"
+  ).matches;
+
+  if (!isMobile || reduceMotion) {
+    finishStartup();
+    return;
+  }
+
+  window.setTimeout(finishStartup, 1250);
+}
 
 function showView(viewId) {
   document.querySelectorAll(".app-view").forEach((view) => {
@@ -1618,5 +1645,6 @@ signOutButton.addEventListener("click", async () => {
 });
 
 setDefaultEventDate();
+showStartupScreen();
 restoreCurrentEvent();
 window.setInterval(() => refreshMenuOptimization(true), 30000);

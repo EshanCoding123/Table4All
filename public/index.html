@@ -19,14 +19,41 @@
     <script src="app.js" defer></script>
   </head>
 
-  <body>
+  <body class="app-starting">
+    <div
+      class="startup-screen"
+      id="startup-screen"
+      role="status"
+      aria-label="Opening TableForAll"
+    >
+      <div class="startup-mark" aria-hidden="true">
+        <span class="startup-person startup-person-orange"></span>
+        <span class="startup-person startup-person-green"></span>
+        <span class="startup-person startup-person-blue"></span>
+        <span class="startup-person startup-person-yellow"></span>
+        <span class="startup-plate">
+          <svg viewBox="0 0 100 100" aria-hidden="true">
+            <path d="M32 22v22M39 22v22M46 22v22M32 34h14M39 44v34" />
+            <ellipse cx="67" cy="35" rx="10" ry="14" />
+            <path d="M67 49v29" />
+          </svg>
+        </span>
+      </div>
+      <p class="startup-wordmark">Table<span>4</span>All</p>
+    </div>
+
     <a class="skip-link" href="#main-content">
       Skip to main content
     </a>
 
     <header class="site-header">
-      <button class="logo logo-button" id="home-button" type="button">
-        TableForAll
+      <button
+        class="logo logo-button"
+        id="home-button"
+        type="button"
+        aria-label="TableForAll home"
+      >
+        Table<span class="logo-four" aria-hidden="true">4</span>All
       </button>
 
       <button

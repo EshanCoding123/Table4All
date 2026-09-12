@@ -106,6 +106,32 @@ const assistantHistory = document.querySelector("#assistant-history");
 const assistantForm = document.querySelector("#assistant-form");
 const assistantQuestion = document.querySelector("#assistant-question");
 const assistantSuggestions = document.querySelectorAll(".assistant-suggestion");
+const portalSectionState = {
+  host: "host-event-details-panel",
+  member: "member-profile-panel",
+};
+const portalNavigation = {
+  host: {
+    select: document.querySelector("#host-section-select"),
+    panelIds: [
+      "host-event-details-panel",
+      "host-add-meal-panel",
+      "host-meals-panel",
+      "menu-coverage-panel",
+      "host-members-panel",
+      "host-chat-panel",
+    ],
+  },
+  member: {
+    select: document.querySelector("#member-section-select"),
+    panelIds: [
+      "member-profile-panel",
+      "member-meals-panel",
+      "member-assistant-panel",
+      "member-chat-panel",
+    ],
+  },
+};
 
 const chatElements = {
   host: {
@@ -197,33 +223,136 @@ function showView(viewId) {
     }
   }
 
+  document.body.classList.toggle(
+    "portal-open",
+    viewId === "host-portal-view" || viewId === "member-portal-view"
+  );
+
   clearMessage();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-function showMessage(message, type = "error") {
-  const label = type === "success" ? "Success" : "Error";
+function setStatusMessage(element, message, type = "error") {
+  if (!element) return;
 
-  appMessage.textContent = `${label}: ${message}`;
-  appMessage.style.color =
-    type === "success" ? "var(--safe)" : "var(--danger)";
+  const validType = ["success", "error", "warning", "info"].includes(type)
+    ? type
+    : "info";
+  const labels = {
+    success: "Success",
+    error: "We couldn’t continue",
+    warning: "Needs attention",
+    info: "Update",
+  };
+
+  element.hidden = false;
+  element.dataset.tone = validType;
+  element.textContent = `${labels[validType]}: ${message}`;
+  element.setAttribute("role", validType === "error" ? "alert" : "status");
+  element.setAttribute(
+    "aria-live",
+    validType === "error" ? "assertive" : "polite"
+  );
+}
+
+function clearStatusMessage(element) {
+  if (!element) return;
+
+  element.hidden = true;
+  element.textContent = "";
+  delete element.dataset.tone;
+  element.setAttribute("role", "status");
+  element.setAttribute("aria-live", "polite");
+}
+
+function showMessage(message, type = "error") {
+  setStatusMessage(appMessage, message, type);
 }
 
 function clearMessage() {
-  appMessage.textContent = "";
+  clearStatusMessage(appMessage);
 }
 
 function showHostMessage(message, type = "success") {
-  const label = type === "success" ? "Success" : "Error";
-
-  hostPortalMessage.hidden = false;
-  hostPortalMessage.textContent = `${label}: ${message}`;
-
-  hostPortalMessage.style.color =
-    type === "success"
-      ? "var(--safe)"
-      : "var(--danger)";
+  setStatusMessage(hostPortalMessage, message, type);
 }
+
+function activatePortalSection(role, targetId, options = {}) {
+  const navigation = portalNavigation[role];
+
+  if (!navigation || !navigation.panelIds.includes(targetId)) return;
+
+  const targetPanel = document.querySelector(`#${targetId}`);
+
+  if (!targetPanel || targetPanel.hidden) return;
+
+  portalSectionState[role] = targetId;
+
+  navigation.panelIds.forEach((panelId) => {
+    const panel = document.querySelector(`#${panelId}`);
+    panel?.classList.toggle("portal-section-hidden", panelId !== targetId);
+  });
+
+  if (navigation.select) navigation.select.value = targetId;
+
+  document
+    .querySelectorAll(`[data-portal-role="${role}"]`)
+    .forEach((button) => {
+      const active = button.dataset.portalTarget === targetId;
+      button.classList.toggle("is-active", active);
+
+      if (active) button.setAttribute("aria-current", "page");
+      else button.removeAttribute("aria-current");
+    });
+
+  if (!options.moveFocus) return;
+
+  const heading = targetPanel.querySelector("h2");
+
+  if (heading) {
+    heading.setAttribute("tabindex", "-1");
+    heading.focus({ preventScroll: true });
+  }
+
+  targetPanel.scrollIntoView({ block: "start", behavior: "smooth" });
+}
+
+function setMemberMealsNavigationAvailable(available) {
+  const navigation = portalNavigation.member;
+  const option = navigation.select?.querySelector(
+    'option[value="member-meals-panel"]'
+  );
+  const button = document.querySelector(
+    '[data-portal-role="member"][data-portal-target="member-meals-panel"]'
+  );
+
+  if (option) option.disabled = !available;
+
+  if (button) {
+    button.disabled = !available;
+    button.title = available
+      ? ""
+      : "Complete your allergy profile to review meal options.";
+  }
+}
+
+Object.entries(portalNavigation).forEach(([role, navigation]) => {
+  navigation.select?.addEventListener("change", () => {
+    activatePortalSection(role, navigation.select.value, {
+      moveFocus: true,
+    });
+  });
+
+  document
+    .querySelectorAll(`[data-portal-role="${role}"]`)
+    .forEach((button) => {
+      button.addEventListener("click", () => {
+        activatePortalSection(role, button.dataset.portalTarget, {
+          moveFocus: true,
+        });
+      });
+    });
+});
 
 function setButtonLoading(button, loading, loadingText) {
   if (loading) {
@@ -239,24 +368,42 @@ function setButtonLoading(button, loading, loadingText) {
 }
 
 async function apiRequest(url, options = {}) {
-  const response = await fetch(url, {
-    ...options,
+  let response;
 
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
-  });
+  try {
+    response = await fetch(url, {
+      ...options,
+
+      headers: {
+        "Content-Type": "application/json",
+        ...options.headers,
+      },
+    });
+  } catch (error) {
+    if (error?.name === "AbortError") throw error;
+
+    throw new Error(
+      "TableForAll could not reach the server. Check your connection and try again."
+    );
+  }
 
   const contentType = response.headers.get("content-type") || "";
 
   if (!contentType.includes("application/json")) {
     throw new Error(
-      "The server returned an unexpected response. Make sure you opened http://localhost:3000 and restarted the server."
+      "The server returned an unexpected response. Refresh the page and try again."
     );
   }
 
-  const data = await response.json();
+  let data;
+
+  try {
+    data = await response.json();
+  } catch {
+    throw new Error(
+      "The server response could not be read. Refresh the page and try again."
+    );
+  }
 
   if (!response.ok) {
     const error = new Error(data.message || "Something went wrong.");
@@ -1294,6 +1441,12 @@ assistantForm.addEventListener("submit", async (event) => {
 });
 
 function showHostPortal(event) {
+  const sameHostEvent =
+    activeEvent?.role === "host" && activeEvent.code === event.code;
+  const selectedSection = sameHostEvent
+    ? portalSectionState.host
+    : "host-event-details-panel";
+
   activeEvent = event;
 
   saveCurrentEvent(event.code, "host");
@@ -1331,15 +1484,15 @@ function showHostPortal(event) {
   renderHostMeals(event);
   renderHostMembers(event);
 
+  clearStatusMessage(hostPortalMessage);
   signOutButton.classList.remove("hidden");
   showView("host-portal-view");
+  activatePortalSection("host", selectedSection);
   openRoomChat(event);
   refreshMenuOptimization();
 }
 function showMemberMessage(message, type = "success") {
-  memberPortalMessage.hidden = false;
-  memberPortalMessage.textContent = `${type === "error" ? "Error" : "Success"}: ${message}`;
-  memberPortalMessage.style.color = type === "error" ? "var(--danger)" : "var(--safe)";
+  setStatusMessage(memberPortalMessage, message, type);
 }
 
 function setMemberProfileEditing(editing) {
@@ -1416,6 +1569,9 @@ function renderMemberMeals(event) {
 }
 
 function showMemberPortal(event) {
+  const sameMemberEvent =
+    activeEvent?.role === "member" && activeEvent.code === event.code;
+
   activeEvent = event;
   saveCurrentEvent(event.code, "member");
   document.querySelector("#member-event-heading").textContent = event.name;
@@ -1423,7 +1579,7 @@ function showMemberPortal(event) {
   document.querySelector("#member-event-date").textContent = `${event.eventType} on ${formatEventDate(event.eventDate)}`;
   document.querySelector("#member-event-code").textContent = event.code;
   document.querySelector("#member-food-blacklist").textContent = `Event food blacklist: ${(event.foodBlacklist || []).join(", ") || "None listed"}`;
-  memberPortalMessage.hidden = true;
+  clearStatusMessage(memberPortalMessage);
 
   const profile = event.currentMember || {};
   memberProfileForm.querySelectorAll('[name="allergies"]').forEach((checkbox) => {
@@ -1439,16 +1595,26 @@ function showMemberPortal(event) {
     createInformationLine("Note for the host", profile.note || "Not provided")
   );
   setMemberProfileEditing(!profile.profileComplete);
+  setMemberMealsNavigationAvailable(profile.profileComplete === true);
   if (profile.profileComplete) renderMemberMeals(event);
   else memberMealOptionsList.replaceChildren();
   signOutButton.classList.remove("hidden");
   showView("member-portal-view");
+  activatePortalSection(
+    "member",
+    profile.profileComplete
+      ? sameMemberEvent
+        ? portalSectionState.member
+        : "member-meals-panel"
+      : "member-profile-panel"
+  );
   openRoomChat(event);
   loadAssistant(event.code);
 }
 
 editMemberProfileButton.addEventListener("click", () => {
   setMemberProfileEditing(true);
+  activatePortalSection("member", "member-profile-panel");
   memberProfileForm.querySelector("input").focus();
 });
 
@@ -1477,6 +1643,9 @@ memberProfileForm.addEventListener("submit", async (event) => {
     });
     if (activeEvent?.code !== code || activeEvent.role !== "member") return;
     showMemberPortal(data.event);
+    activatePortalSection("member", "member-meals-panel", {
+      moveFocus: true,
+    });
     showMemberMessage(data.message);
   } catch (error) {
     showMemberMessage(error.message, "error");
@@ -1943,6 +2112,9 @@ mealOptionForm.addEventListener(
 
       mealOptionForm.reset();
       showHostPortal(data.event);
+      activatePortalSection("host", "host-meals-panel", {
+        moveFocus: true,
+      });
       showHostMessage(data.message, "success");
     } catch (error) {
       showHostMessage(error.message, "error");

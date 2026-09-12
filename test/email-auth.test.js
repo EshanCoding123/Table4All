@@ -81,6 +81,41 @@ test("email service sends through Gmail SMTP when Gmail credentials are configur
   assert.match(sent.html, /123456/);
 });
 
+test("email service sends through SendGrid HTTPS without a custom domain", async () => {
+  let request;
+  const service = createEmailService({
+    sendGridFetch: async (url, options) => {
+      request = { url, options };
+      return {
+        ok: true,
+        headers: { get: (name) => name === "x-message-id" ? "sendgrid-message-1" : null },
+      };
+    },
+    environment: {
+      NODE_ENV: "production",
+      SENDGRID_API_KEY: "SG.test-only",
+      EMAIL_FROM: "TableForAll <tableforall.sender@gmail.com>",
+    },
+  });
+
+  const result = await service.sendVerificationCode({
+    email: "guest@example.test",
+    code: "123456",
+    expiresAt: new Date("2030-01-02T03:04:05.000Z"),
+  });
+  const body = JSON.parse(request.options.body);
+
+  assert.deepEqual(result, { id: "sendgrid-message-1" });
+  assert.equal(request.url, "https://api.sendgrid.com/v3/mail/send");
+  assert.equal(request.options.headers.Authorization, "Bearer SG.test-only");
+  assert.deepEqual(body.from, {
+    name: "TableForAll",
+    email: "tableforall.sender@gmail.com",
+  });
+  assert.equal(body.personalizations[0].to[0].email, "guest@example.test");
+  assert.match(body.content[0].value, /123456/);
+});
+
 test("email service turns a provider rejection into a delivery error", async () => {
   const service = createEmailService({
     client: { emails: { send: async () => ({ error: { message: "provider detail" } }) } },

@@ -10,20 +10,36 @@ function escapeHtml(value) {
   })[character]);
 }
 
+function parseSender(value) {
+  const sender = String(value || "").trim();
+  const namedSender = sender.match(/^(.+?)\s*<([^<>]+)>$/);
+  if (!namedSender) return { email: sender };
+  return {
+    name: namedSender[1].trim(),
+    email: namedSender[2].trim(),
+  };
+}
+
 function createEmailService(options = {}) {
   const environment = options.environment || process.env;
+  const sendGridApiKey = String(environment.SENDGRID_API_KEY || "").trim();
+  const sendGridFetch = options.sendGridFetch || globalThis.fetch;
   const gmailUser = String(environment.GMAIL_USER || "").trim();
   const gmailAppPassword = String(environment.GMAIL_APP_PASSWORD || "")
     .replace(/\s/g, "");
   const transporter = options.transporter || (
-    gmailUser && gmailAppPassword
+    !sendGridApiKey && gmailUser && gmailAppPassword
       ? nodemailer.createTransport({
         service: "gmail",
         auth: { user: gmailUser, pass: gmailAppPassword },
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 15000,
+        dnsTimeout: 10000,
       })
       : null
   );
-  const client = options.client || (!transporter && environment.RESEND_API_KEY
+  const client = options.client || (!sendGridApiKey && !transporter && environment.RESEND_API_KEY
     ? new Resend(environment.RESEND_API_KEY)
     : null);
   const from = options.from ?? environment.EMAIL_FROM ?? (
@@ -34,9 +50,9 @@ function createEmailService(options = {}) {
     environment.DEV_LOG_VERIFICATION_CODES === "true";
 
   async function sendVerificationCode({ email, code, expiresAt }) {
-    if ((!transporter && !client) || !from) {
+    if ((!sendGridApiKey && !transporter && !client) || !from) {
       throw new EmailConfigurationError(
-        "Email verification is not configured. Add Gmail SMTP or Resend credentials."
+        "Email verification is not configured. Add SendGrid, Gmail SMTP, or Resend credentials."
       );
     }
     const expiration = expiresAt.toISOString();
@@ -64,7 +80,32 @@ function createEmailService(options = {}) {
 
     let id = null;
     try {
-      if (transporter) {
+      if (sendGridApiKey) {
+        if (typeof sendGridFetch !== "function") {
+          throw new Error("HTTPS requests are unavailable.");
+        }
+        const response = await sendGridFetch("https://api.sendgrid.com/v3/mail/send", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${sendGridApiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            personalizations: [{ to: [{ email }] }],
+            from: parseSender(from),
+            subject: message.subject,
+            content: [
+              { type: "text/plain", value: text },
+              { type: "text/html", value: html },
+            ],
+          }),
+          signal: AbortSignal.timeout(15000),
+        });
+        if (!response.ok) {
+          throw new Error("SendGrid rejected the request.");
+        }
+        id = response.headers?.get?.("x-message-id") || null;
+      } else if (transporter) {
         const result = await transporter.sendMail(message);
         id = result?.messageId || null;
       } else {

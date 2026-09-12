@@ -25,7 +25,11 @@ When Resend rejects a delivery, TableForAll removes the newly created verificati
 
 ### Gmail SMTP alternative
 
-For a small demonstration that does not use a custom domain, enable two-step verification on a personal Google account and create a Google App Password for TableForAll. Set `GMAIL_USER` to that Gmail address, `GMAIL_APP_PASSWORD` to the generated app password, and `EMAIL_FROM` to `TableForAll <the-same-address@gmail.com>`. Gmail takes priority when both Gmail and Resend credentials are configured. Never use the normal Google account password or commit an app password.
+For local use or hosting plans that allow SMTP, enable two-step verification on a personal Google account and create a Google App Password for TableForAll. Set `GMAIL_USER` to that Gmail address, `GMAIL_APP_PASSWORD` to the generated app password, and `EMAIL_FROM` to `TableForAll <the-same-address@gmail.com>`. Never use the normal Google account password or commit an app password. Render free web services block outbound SMTP ports, so use SendGrid on that plan.
+
+### SendGrid alternative for Render free services
+
+SendGrid Single Sender Verification can verify an individual sender address without a custom domain. Create a SendGrid API key, set `SENDGRID_API_KEY`, and set `EMAIL_FROM` to the exact verified sender, for example `TableForAll <your-address@gmail.com>`. SendGrid uses HTTPS and takes priority over Gmail and Resend when configured.
 
 ## OpenAI meal assistant
 

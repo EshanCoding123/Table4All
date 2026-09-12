@@ -138,6 +138,7 @@ let chatContext = null;
 let chatMessages = [];
 let chatCurrentUserId = null;
 let captchaInitializationPromise = null;
+let turnstileScriptPromise = null;
 const captchaState = {
   enabled: false,
   required: false,
@@ -269,19 +270,27 @@ async function apiRequest(url, options = {}) {
 
 function loadTurnstileScript() {
   if (window.turnstile) return Promise.resolve();
+  if (turnstileScriptPromise) return turnstileScriptPromise;
 
-  return new Promise((resolve, reject) => {
+  turnstileScriptPromise = new Promise((resolve, reject) => {
     const existingScript = document.querySelector("script[data-turnstile-script]");
     const script = existingScript || document.createElement("script");
+    const timeout = window.setTimeout(() => {
+      reject(new Error(
+        "The security check took too long to load. Check your connection or content blocker and try again."
+      ));
+    }, 8000);
 
     script.addEventListener("load", () => {
-      if (!window.turnstile) {
+      window.clearTimeout(timeout);
+      if (!window.turnstile?.render) {
         reject(new Error("The security check did not load."));
         return;
       }
-      window.turnstile.ready(resolve);
+      resolve();
     }, { once: true });
     script.addEventListener("error", () => {
+      window.clearTimeout(timeout);
       reject(new Error("The security check did not load."));
     }, { once: true });
 
@@ -293,10 +302,27 @@ function loadTurnstileScript() {
       document.head.append(script);
     }
   });
+
+  return turnstileScriptPromise;
 }
 
 async function initializeCaptcha() {
-  const data = await apiRequest("/api/auth/config");
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 8000);
+  let data;
+
+  try {
+    data = await apiRequest("/api/auth/config", {
+      signal: controller.signal,
+    });
+  } catch (error) {
+    if (error.name === "AbortError") {
+      throw new Error("The account security settings took too long to load. Refresh and try again.");
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeout);
+  }
   captchaState.enabled = data.captcha?.enabled === true;
   captchaState.required = data.captcha?.required === true;
   captchaState.siteKey = data.captcha?.siteKey || null;
@@ -334,24 +360,33 @@ async function ensureCaptcha(kind, action = kind) {
   container.hidden = false;
   container.replaceChildren();
 
-  captchaState.widgetIds[kind] = window.turnstile.render(container, {
-    sitekey: captchaState.siteKey,
-    action,
-    size: window.matchMedia("(max-width: 370px)").matches
-      ? "compact"
-      : "normal",
-    theme: "light",
-    callback(token) {
-      captchaState.tokens[kind] = token;
-    },
-    "expired-callback"() {
-      captchaState.tokens[kind] = "";
-    },
-    "error-callback"() {
-      captchaState.tokens[kind] = "";
-      return true;
-    },
-  });
+  try {
+    captchaState.widgetIds[kind] = window.turnstile.render(container, {
+      sitekey: captchaState.siteKey,
+      action,
+      size: window.matchMedia("(max-width: 370px)").matches
+        ? "compact"
+        : "normal",
+      theme: "light",
+      callback(token) {
+        captchaState.tokens[kind] = token;
+      },
+      "expired-callback"() {
+        captchaState.tokens[kind] = "";
+      },
+      "error-callback"() {
+        captchaState.tokens[kind] = "";
+        return true;
+      },
+    });
+  } catch {
+    const errorMessage = document.createElement("p");
+    errorMessage.className = "field-help";
+    errorMessage.textContent =
+      "The security check could not open. Refresh the page and try again.";
+    container.replaceChildren(errorMessage);
+    return false;
+  }
   captchaState.widgetActions[kind] = action;
 
   return true;
@@ -584,17 +619,27 @@ function setDefaultEventDate() {
 
 async function requestVerification(authentication) {
   let data;
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 20000);
 
   try {
     data = await apiRequest("/api/auth/request-code", {
       method: "POST",
       body: JSON.stringify(authentication),
+      signal: controller.signal,
     });
   } catch (error) {
+    if (error.name === "AbortError") {
+      throw new Error(
+        "The login request took too long. Check your connection and try again."
+      );
+    }
     if (error.status === 429 && error.data?.retryAfterSeconds) {
       startResendCooldown(error.data.retryAfterSeconds);
     }
     throw error;
+  } finally {
+    window.clearTimeout(timeout);
   }
 
   const { captchaToken, ...pendingAuthenticationDetails } = authentication;

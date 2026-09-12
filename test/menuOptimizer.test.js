@@ -83,8 +83,8 @@ test("single-allergen reviews count only newly covered members", () => {
   assert.equal(removals(result).length, 1);
   assert.equal(removals(result)[0].estimatedAdditionalMembers, 2);
   assert.deepEqual(removals(result)[0].allergens, ["peanuts"]);
-  assert.match(removals(result)[0].action, /2 additional members/);
-  assert.match(removals(result)[0].caution, /label alone does not establish coverage/);
+  assert.match(removals(result)[0].reasons[0], /every other meal restriction/);
+  assert.match(removals(result)[0].caution, /Confirm the full recipe/);
 });
 
 test("one-allergen hypotheticals do not remove a member's other known conflicts", () => {
@@ -143,7 +143,7 @@ test("ties and output are deterministic even when dishes and members are reorder
   assert.deepEqual(first, second);
   assert.deepEqual(removals(first).map((item) => item.dishName), ["Apple noodles", "Zebra noodles"]);
   assert.deepEqual(first.suggestions.map((item) => item.rank), [1, 2, 3]);
-  assert.match(first.estimateNote, /overlap and must not be added together/);
+  assert.match(first.estimateNote, /overlap; do not add them together/);
 });
 
 test("unpublished meals affect neither coverage, blockers, missing information nor suggestions", () => {
@@ -164,8 +164,8 @@ test("missing-information reviews explain all unknowns and do not estimate extra
   const missing = result.suggestions.find((item) => item.type === "missing-information");
   assert.equal(missing.estimatedAdditionalMembers, null);
   assert.equal(missing.reasons.length, 3);
-  assert.match(missing.action, /may also confirm a conflict/);
-  assert.match(missing.caution, /No additional coverage is counted/);
+  assert.match(missing.action, /Complete the ingredient and preparation details/);
+  assert.match(missing.caution, /Impact stays unknown/);
   assert.deepEqual(removals(result), []);
 });
 
@@ -178,7 +178,8 @@ test("add-option avoidance combines only uncovered members' listed allergies wit
   const added = result.suggestions.find((item) => item.type === "add-option");
   assert.equal(added.estimatedAdditionalMembers, 2);
   assert.deepEqual(added.avoidAllergens, ["kiwi", "milk", "peanuts", "sesame"]);
-  assert.match(added.action, /if ingredients and preparation are confirmed/);
+  assert.match(added.action, /avoids kiwi, milk, peanuts, sesame/);
+  assert.match(added.caution, /not a safety guarantee/);
 });
 
 test("blacklist conflicts in ingredients or possible allergens block hypothetical gains", () => {
@@ -230,5 +231,5 @@ test("analysis is pure and contains no member names, emails, IDs, or notes", () 
   const result = optimizeMenu(event);
   assert.deepEqual(event, original);
   assert.doesNotMatch(JSON.stringify(result), /private-member-id|Private Person|private@example.invalid|Private note/);
-  assert.match(result.disclaimer, /does not mean allergy-safe/);
+  assert.match(result.disclaimer, /not a safety guarantee/);
 });

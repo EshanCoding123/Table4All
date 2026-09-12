@@ -895,9 +895,9 @@ function createInformationLine(label, value) {
 }
 
 function crossContactLabel(status) {
-  if (status === "possible") return "Possible cross-contact reported";
-  if (status === "reported-separate") return "Separate preparation and equipment reported by the host; not independently verified";
-  return "Unknown or not confirmed";
+  if (status === "possible") return "Possible";
+  if (status === "reported-separate") return "Separate preparation reported (not verified)";
+  return "Not provided";
 }
 
 function appendBlacklistWarning(card, dish) {
@@ -1056,28 +1056,34 @@ function renderMenuOptimization(analysis) {
   const status = document.querySelector("#menu-coverage-status");
   if (!profiledMembers) {
     status.dataset.tone = "information";
-    status.textContent = "ℹ Profiles needed: coverage cannot be calculated until a guest completes a profile.";
+    status.textContent = "ℹ Waiting for completed guest profiles.";
   } else if (!uncoveredMembers) {
     status.dataset.tone = "complete";
-    status.textContent = "✓ All profiled members have a listed option. Ingredients and preparation still need direct confirmation.";
+    status.textContent = "✓ All profiled members have an option.";
   } else {
     status.dataset.tone = coveredMembers ? "review" : "uncovered";
-    status.textContent = `⚠ ${uncoveredMembers} profiled ${uncoveredMembers === 1 ? "member has" : "members have"} no published option with a NO LISTED CONFLICT result.`;
+    status.textContent = `⚠ ${uncoveredMembers} profiled ${uncoveredMembers === 1 ? "member still needs" : "members still need"} an option.`;
   }
   const percentText = coveragePercentage === null
-    ? "Coverage percentage: not calculated (no completed profiles)"
-    : `${coveragePercentage}% of profiled members have a listed option`;
+    ? "Coverage unavailable"
+    : `${coveragePercentage}% coverage`;
   document.querySelector("#menu-coverage-percent").textContent = percentText;
   const progress = document.querySelector("#menu-coverage-progress");
   progress.value = coveragePercentage ?? 0;
-  progress.setAttribute("aria-valuetext", percentText);
+  progress.setAttribute(
+    "aria-valuetext",
+    coveragePercentage === null
+      ? "Coverage unavailable because no profiles are complete"
+      : `${coveragePercentage}% of profiled members have an option`
+  );
   document.querySelector("#menu-profiled-count").textContent = profiledMembers;
   document.querySelector("#menu-covered-count").textContent = coveredMembers;
   document.querySelector("#menu-uncovered-count").textContent = uncoveredMembers;
   document.querySelector("#menu-missing-profiles").textContent = missingProfiles
-    ? `⚠ ${missingProfiles} ${missingProfiles === 1 ? "member still needs" : "members still need"} to complete an allergy profile. They are excluded from the coverage percentage and all estimated gains.`
-    : "✓ No guest members are missing an allergy profile.";
-  document.querySelector("#menu-published-count").textContent = `${analysis.publishedMeals} published meal ${analysis.publishedMeals === 1 ? "option analyzed" : "options analyzed"}.`;
+    ? `⚠ ${missingProfiles} incomplete ${missingProfiles === 1 ? "profile" : "profiles"} (excluded).`
+    : "✓ All guest profiles complete.";
+  document.querySelector("#menu-published-count").textContent =
+    `${analysis.publishedMeals} published ${analysis.publishedMeals === 1 ? "meal" : "meals"} analyzed.`;
   document.querySelector("#menu-coverage-disclaimer").textContent = analysis.disclaimer;
   document.querySelector("#menu-estimate-note").textContent = analysis.estimateNote;
 
@@ -1085,14 +1091,14 @@ function renderMenuOptimization(analysis) {
   blockers.replaceChildren();
   analysis.blockingAllergens.forEach((blocker) => {
     const item = document.createElement("li");
-    item.textContent = `⚠ ${blocker.allergen}: ${blocker.affectedMembers} uncovered ${blocker.affectedMembers === 1 ? "member" : "members"} (${blocker.knownMatchMembers} with known matches; ${blocker.possibleMatchMembers} with possible matches).`;
+    item.textContent = `⚠ ${blocker.allergen}: ${blocker.affectedMembers} ${blocker.affectedMembers === 1 ? "member" : "members"} (${blocker.knownMatchMembers} known, ${blocker.possibleMatchMembers} possible).`;
     blockers.append(item);
   });
   if (!analysis.blockingAllergens.length) {
     const item = document.createElement("li");
     item.textContent = uncoveredMembers
-      ? "ℹ No exact allergen matches were found for uncovered members. Missing information, blacklist conflicts, or a lack of published meals may be limiting coverage."
-      : "ℹ No allergen blockers among currently uncovered members.";
+      ? "ℹ No allergen matches found. Missing details or meals may be the issue."
+      : "ℹ No current allergen blockers.";
     blockers.append(item);
   }
 
@@ -1101,7 +1107,7 @@ function renderMenuOptimization(analysis) {
   blacklistList.replaceChildren();
   analysis.blacklistConflicts.forEach((conflict) => {
     const item = document.createElement("li");
-    item.textContent = `${conflict.dishName}: ${conflict.allergens.join(", ")}. Confirm a recipe and preparation change that respects the event blacklist.`;
+    item.textContent = `${conflict.dishName}: ${conflict.allergens.join(", ")}. Review the recipe and preparation.`;
     blacklistList.append(item);
   });
 
@@ -1115,8 +1121,8 @@ function renderMenuOptimization(analysis) {
     const estimate = document.createElement("p");
     estimate.className = "coverage-estimate";
     estimate.textContent = suggestion.estimatedAdditionalMembers === null
-      ? "ℹ Additional members helped: not estimated. Information needs review."
-      : `⚠ Conditional estimate: ${suggestion.estimatedAdditionalMembers} additional ${suggestion.estimatedAdditionalMembers === 1 ? "member" : "members"} could gain an option.`;
+      ? "ℹ Impact unknown until details are complete."
+      : `Potential: +${suggestion.estimatedAdditionalMembers} ${suggestion.estimatedAdditionalMembers === 1 ? "member" : "members"}.`;
     const action = document.createElement("p");
     action.textContent = suggestion.action;
     const reasons = document.createElement("ul");
@@ -1134,8 +1140,8 @@ function renderMenuOptimization(analysis) {
   const empty = document.querySelector("#menu-no-suggestions");
   empty.hidden = analysis.suggestions.length > 0;
   empty.textContent = profiledMembers
-    ? "✓ No additional coverage changes are suggested for the current profiles. Recheck after meal or profile changes."
-    : "ℹ Invite guests to complete their profiles before estimating menu changes.";
+    ? "✓ No menu changes suggested right now."
+    : "ℹ Complete guest profiles to get suggestions.";
   document.querySelector("#menu-analysis-updated").textContent = `Last refreshed at ${new Date().toLocaleTimeString()}.`;
   menuCoverageResults.hidden = false;
 }
@@ -1534,7 +1540,7 @@ function renderMemberMeals(event) {
   const dishes = (event.dishes || []).filter((dish) => dish.isPublished);
   if (!dishes.length) {
     const empty = document.createElement("p");
-    empty.textContent = "No meal options have been published yet. Check back or ask the host.";
+    empty.textContent = "No published meals yet.";
     memberMealOptionsList.append(empty);
     return;
   }
@@ -1551,9 +1557,9 @@ function renderMemberMeals(event) {
 
     const review = dish.review || {
       status: "REVIEW NEEDED",
-      reasons: ["A personalized result is unavailable. Refresh the meal options or speak with the host."],
+      reasons: ["Personalized result unavailable."],
       action: "Ask the host about ingredients and preparation.",
-      disclaimer: "This is based only on information entered by participants. Confirm ingredients and preparation directly.",
+      disclaimer: "Participant-provided information only—not a safety guarantee.",
     };
     const panel = document.createElement("div");
     panel.className = "meal-review-panel";
@@ -1573,7 +1579,7 @@ function renderMemberMeals(event) {
     });
     const action = document.createElement("p");
     action.className = "meal-review-action";
-    action.textContent = review.action;
+    action.textContent = `Next: ${review.action}`;
     const disclaimer = document.createElement("p");
     disclaimer.className = "meal-review-disclaimer";
     disclaimer.textContent = review.disclaimer;
@@ -1583,9 +1589,9 @@ function renderMemberMeals(event) {
     card.append(
       createInformationLine("Category", dish.category || "Other"),
       createInformationLine("Ingredients", dish.ingredients?.join(", ") || "Not provided"),
-      createInformationLine("Ingredient list", dish.ingredientListComplete ? "Marked complete by the host" : "Incomplete or not confirmed"),
-      createInformationLine("Known allergens", dish.containsAllergens?.join(", ") || "None listed; not independently verified"),
-      createInformationLine("Possible allergens", dish.mayContainAllergens?.join(", ") || "None listed; not independently verified"),
+      createInformationLine("Ingredient list", dish.ingredientListComplete ? "Complete" : "Incomplete"),
+      createInformationLine("Known allergens", dish.containsAllergens?.join(", ") || "None listed"),
+      createInformationLine("Possible allergens", dish.mayContainAllergens?.join(", ") || "None listed"),
       createInformationLine("Preparation information", dish.preparationInformation || "Not provided"),
       createInformationLine("Cross-contact information", crossContactLabel(dish.crossContactStatus))
     );

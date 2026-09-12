@@ -30,7 +30,7 @@ test("known matches are HIGH RISK with every exact matching allergen", () => {
   assert.equal(result.status, "HIGH RISK");
   assert.deepEqual(result.knownMatches, ["tree nuts", "milk", "kiwi"]);
   assert.match(result.reasons[0], /tree nuts, milk, kiwi/);
-  assert.equal(result.action, "Do not choose this meal without speaking directly with the host.");
+  assert.equal(result.action, "Do not choose this meal before speaking with the host.");
 });
 
 test("high risk takes precedence while retaining all review and blacklist reasons", () => {
@@ -39,7 +39,7 @@ test("high risk takes precedence while retaining all review and blacklist reason
     ingredientListComplete: false, crossContactStatus: "unknown",
   }, profile, ["rice"]);
   assert.equal(result.status, "HIGH RISK");
-  for (const reason of [/Known allergen/, /Possible allergen/, /not marked complete/, /unclear/, /Your concern/, /blacklist match/]) {
+  for (const reason of [/Contains:/, /May contain:/, /incomplete/, /details missing/, /cross-contact concern/, /Event blacklist/]) {
     assert.ok(result.reasons.some((text) => reason.test(text)), `Missing reason: ${reason}`);
   }
 });
@@ -54,20 +54,20 @@ test("possible allergen matches require review even if cross-contact concern is 
 test("incomplete ingredient lists require review without an allergen match", () => {
   const result = reviewMeal({ ...completeMeal, ingredientListComplete: false }, profile);
   assert.equal(result.status, "REVIEW NEEDED");
-  assert.ok(result.reasons.includes("The ingredient list is not marked complete."));
+  assert.ok(result.reasons.includes("Ingredient list incomplete."));
 });
 
 test("empty ingredients remain unknown even when the complete box is checked", () => {
   const result = reviewMeal({ ...completeMeal, ingredients: [] }, profile);
   assert.equal(result.status, "REVIEW NEEDED");
-  assert.ok(result.reasons.includes("No ingredients have been provided."));
+  assert.ok(result.reasons.includes("No ingredients listed."));
 });
 
 test("missing, unknown, or unrecognized cross-contact statuses require review", () => {
   for (const crossContactStatus of [undefined, "", "unknown", "unrecognized"]) {
     const result = reviewMeal({ ...completeMeal, crossContactStatus }, { ...profile, crossContactConcern: false });
     assert.equal(result.status, "REVIEW NEEDED");
-    assert.ok(result.reasons.some((text) => text.includes("Cross-contact information is unclear")));
+    assert.ok(result.reasons.some((text) => text.includes("Cross-contact details missing")));
   }
 });
 
@@ -79,8 +79,8 @@ test("free-text preparation claims do not replace explicit cross-contact informa
 test("reported possible cross-contact requires review and explains a member's concern", () => {
   const result = reviewMeal({ ...completeMeal, crossContactStatus: "possible" }, profile);
   assert.equal(result.status, "REVIEW NEEDED");
-  assert.ok(result.reasons.some((text) => text.includes("host reports possible cross-contact")));
-  assert.ok(result.reasons.some((text) => text.includes("Your concern about cross-contact")));
+  assert.ok(result.reasons.some((text) => text.includes("Possible cross-contact reported")));
+  assert.ok(result.reasons.some((text) => text.includes("cross-contact concern")));
 });
 
 test("complete information and no matches produce NO LISTED CONFLICT with the disclaimer", () => {
@@ -88,9 +88,9 @@ test("complete information and no matches produce NO LISTED CONFLICT with the di
   assert.equal(result.status, "NO LISTED CONFLICT");
   assert.deepEqual(result.knownMatches, []);
   assert.deepEqual(result.possibleMatches, []);
-  assert.equal(result.disclaimer, "This is based only on information entered by participants. Confirm ingredients and preparation directly.");
-  assert.equal(result.action, "Confirm ingredients and preparation directly.");
-  assert.ok(result.reasons.some((text) => text.includes("not been independently verified")));
+  assert.equal(result.disclaimer, "Participant-provided information only—not a safety guarantee.");
+  assert.equal(result.action, "Confirm ingredients and preparation with the host.");
+  assert.ok(result.reasons.some((text) => text.includes("not verified")));
 });
 
 test("exact comparisons do not confuse fish with shellfish or wheat with buckwheat", () => {

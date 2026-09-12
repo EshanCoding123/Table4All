@@ -832,7 +832,7 @@
         </div>
         <button id="refresh-menu-analysis-button" class="secondary-button" type="button">Refresh analysis</button>
       </div>
-      <p>Coverage counts guest members, excluding the host. Analysis refreshes after host changes and every 30 seconds while this portal is visible.</p>
+      <p>See who has an option and what to review next.</p>
       <p id="menu-coverage-message" class="coverage-message" role="status" aria-live="polite">ℹ Loading menu analysis…</p>
 
       <div id="menu-coverage-results" hidden>
@@ -851,17 +851,17 @@
 
         <div class="coverage-allergens">
           <h3>Allergens limiting current options</h3>
-          <p>Counts show uncovered members with a known or possible exact allergen match in at least one published meal. Members may appear under several allergens; removing one match may not resolve their other blockers.</p>
+          <p>Counts show affected uncovered members.</p>
           <ul id="menu-blocking-allergens"></ul>
         </div>
         <div id="menu-blacklist-conflicts" class="coverage-blacklist" hidden>
           <h3>⊗ Event blacklist conflicts</h3>
-          <p>These published meals match the event food blacklist. Removing an allergen label does not resolve these conflicts or produce an estimated gain.</p>
+          <p>These meals match the event blacklist.</p>
           <ul id="menu-blacklist-list"></ul>
         </div>
 
         <h3>Ranked suggested actions</h3>
-        <p>Higher conditional gains rank first. For equal gains, reviews of a single allergen in an existing meal come before a new option. Missing-information reviews have no estimated gain.</p>
+        <p>Highest estimated impact first.</p>
         <p id="menu-estimate-note"></p>
         <ol id="menu-optimization-suggestions" class="coverage-suggestions"></ol>
         <p id="menu-no-suggestions" hidden></p>
@@ -987,7 +987,7 @@
             <button id="refresh-member-meals-button" class="secondary-button" type="button">Refresh meal options</button>
           </div>
           <p id="member-food-blacklist"></p>
-          <p>Results compare exact names entered by participants. Missing information stays marked for review. “No listed conflict” does not mean allergy-safe.</p>
+          <p>Exact matches only. “No listed conflict” is not a safety guarantee.</p>
           <div id="member-meal-options-list" class="member-meal-options-list"></div>
         </section>
 

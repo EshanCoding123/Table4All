@@ -561,32 +561,6 @@
     </select>
   </div>
 
-  <nav class="portal-bottom-nav" aria-label="Host portal sections">
-    <button type="button" data-portal-role="host" data-portal-target="host-event-details-panel">
-      <svg class="portal-tab-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9h13v-9M9.5 19v-5h5v5"/></svg>
-      <span>Details</span>
-    </button>
-    <button type="button" data-portal-role="host" data-portal-target="host-add-meal-panel">
-      <svg class="portal-tab-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
-      <span>Add meal</span>
-    </button>
-    <button type="button" data-portal-role="host" data-portal-target="host-meals-panel">
-      <svg class="portal-tab-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4v16M4 4v5a2 2 0 0 0 4 0V4M17 4v16M17 4c2 1.5 3 3.5 3 6h-3"/></svg>
-      <span>Meals</span>
-    </button>
-    <button type="button" data-portal-role="host" data-portal-target="menu-coverage-panel">
-      <svg class="portal-tab-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9h-9V3Z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15V3.5Z"/></svg>
-      <span>Coverage</span>
-    </button>
-    <button type="button" data-portal-role="host" data-portal-target="host-members-panel">
-      <svg class="portal-tab-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3.5 19c.5-4 2.3-6 5.5-6s5 2 5.5 6M14 14c3.5-.6 5.8 1.1 6.5 4.5"/></svg>
-      <span>Members</span>
-    </button>
-    <button type="button" data-portal-role="host" data-portal-target="host-chat-panel">
-      <svg class="portal-tab-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v12H9l-5 3V5Z"/><path d="M8 9h8M8 13h5"/></svg>
-      <span>Chat</span>
-    </button>
-  </nav>
 
   <div
     id="host-portal-message"
@@ -957,24 +931,6 @@
           </select>
         </div>
 
-        <nav class="portal-bottom-nav" aria-label="Member portal sections">
-          <button type="button" data-portal-role="member" data-portal-target="member-profile-panel">
-            <svg class="portal-tab-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4.5 20c.8-4.5 3.3-7 7.5-7s6.7 2.5 7.5 7"/></svg>
-            <span>Profile</span>
-          </button>
-          <button type="button" data-portal-role="member" data-portal-target="member-meals-panel">
-            <svg class="portal-tab-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4v16M4 4v5a2 2 0 0 0 4 0V4M17 4v16M17 4c2 1.5 3 3.5 3 6h-3"/></svg>
-            <span>Meals</span>
-          </button>
-          <button type="button" data-portal-role="member" data-portal-target="member-assistant-panel">
-            <svg class="portal-tab-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 1.3 4.2L17 9l-3.7 1.8L12 15l-1.3-4.2L7 9l3.7-1.8L12 3ZM18.5 14l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2Z"/></svg>
-            <span>Ask AI</span>
-          </button>
-          <button type="button" data-portal-role="member" data-portal-target="member-chat-panel">
-            <svg class="portal-tab-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v12H9l-5 3V5Z"/><path d="M8 9h8M8 13h5"/></svg>
-            <span>Chat</span>
-          </button>
-        </nav>
 
         <div id="member-portal-message" class="form-message" role="status" aria-live="polite" hidden></div>
 
@@ -1084,6 +1040,52 @@
         </p>
       </aside>
     </main>
+
+    <nav id="host-mobile-navigation" class="portal-bottom-nav" aria-label="Host portal sections" hidden>
+        <button type="button" data-portal-role="host" data-portal-target="host-event-details-panel">
+          <svg class="portal-tab-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9h13v-9M9.5 19v-5h5v5"/></svg>
+          <span>Details</span>
+        </button>
+        <button type="button" data-portal-role="host" data-portal-target="host-add-meal-panel">
+          <svg class="portal-tab-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
+          <span>Add meal</span>
+        </button>
+        <button type="button" data-portal-role="host" data-portal-target="host-meals-panel">
+          <svg class="portal-tab-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4v16M4 4v5a2 2 0 0 0 4 0V4M17 4v16M17 4c2 1.5 3 3.5 3 6h-3"/></svg>
+          <span>Meals</span>
+        </button>
+        <button type="button" data-portal-role="host" data-portal-target="menu-coverage-panel">
+          <svg class="portal-tab-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9h-9V3Z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15V3.5Z"/></svg>
+          <span>Coverage</span>
+        </button>
+        <button type="button" data-portal-role="host" data-portal-target="host-members-panel">
+          <svg class="portal-tab-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3.5 19c.5-4 2.3-6 5.5-6s5 2 5.5 6M14 14c3.5-.6 5.8 1.1 6.5 4.5"/></svg>
+          <span>Members</span>
+        </button>
+        <button type="button" data-portal-role="host" data-portal-target="host-chat-panel">
+          <svg class="portal-tab-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v12H9l-5 3V5Z"/><path d="M8 9h8M8 13h5"/></svg>
+          <span>Chat</span>
+        </button>
+      </nav>
+
+    <nav id="member-mobile-navigation" class="portal-bottom-nav" aria-label="Member portal sections" hidden>
+              <button type="button" data-portal-role="member" data-portal-target="member-profile-panel">
+                <svg class="portal-tab-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4.5 20c.8-4.5 3.3-7 7.5-7s6.7 2.5 7.5 7"/></svg>
+                <span>Profile</span>
+              </button>
+              <button type="button" data-portal-role="member" data-portal-target="member-meals-panel">
+                <svg class="portal-tab-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4v16M4 4v5a2 2 0 0 0 4 0V4M17 4v16M17 4c2 1.5 3 3.5 3 6h-3"/></svg>
+                <span>Meals</span>
+              </button>
+              <button type="button" data-portal-role="member" data-portal-target="member-assistant-panel">
+                <svg class="portal-tab-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 1.3 4.2L17 9l-3.7 1.8L12 15l-1.3-4.2L7 9l3.7-1.8L12 3ZM18.5 14l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2Z"/></svg>
+                <span>Ask AI</span>
+              </button>
+              <button type="button" data-portal-role="member" data-portal-target="member-chat-panel">
+                <svg class="portal-tab-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v12H9l-5 3V5Z"/><path d="M8 9h8M8 13h5"/></svg>
+                <span>Chat</span>
+              </button>
+            </nav>
 
     <footer>
       <p>&copy; 2026 TableForAll</p>

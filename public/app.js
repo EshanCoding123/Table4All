@@ -113,6 +113,7 @@ const portalSectionState = {
 const portalNavigation = {
   host: {
     select: document.querySelector("#host-section-select"),
+    mobileNav: document.querySelector("#host-mobile-navigation"),
     panelIds: [
       "host-event-details-panel",
       "host-add-meal-panel",
@@ -124,6 +125,7 @@ const portalNavigation = {
   },
   member: {
     select: document.querySelector("#member-section-select"),
+    mobileNav: document.querySelector("#member-mobile-navigation"),
     panelIds: [
       "member-profile-panel",
       "member-meals-panel",
@@ -227,6 +229,9 @@ function showView(viewId) {
     "portal-open",
     viewId === "host-portal-view" || viewId === "member-portal-view"
   );
+
+  portalNavigation.host.mobileNav.hidden = viewId !== "host-portal-view";
+  portalNavigation.member.mobileNav.hidden = viewId !== "member-portal-view";
 
   clearMessage();
   window.scrollTo({ top: 0, behavior: "smooth" });

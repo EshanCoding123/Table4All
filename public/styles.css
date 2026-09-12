@@ -1488,7 +1488,7 @@ footer p {
     display: none;
   }
 
-  .portal-bottom-nav {
+  body.portal-open > .portal-bottom-nav:not([hidden]) {
     position: fixed;
     right: 0;
     bottom: 0;

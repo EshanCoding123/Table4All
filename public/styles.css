@@ -1474,6 +1474,12 @@ footer p {
     flex-wrap: wrap;
   }
 
+  .app-view.portal-view:not(.hidden),
+  .app-view.member-portal:not(.hidden) {
+    animation: none;
+    transform: none;
+  }
+
   body.portal-open main {
     padding-bottom: calc(88px + env(safe-area-inset-bottom));
   }
@@ -1525,6 +1531,10 @@ footer p {
     border: 0;
     border-radius: 10px;
     box-shadow: none;
+    transition:
+      color 160ms ease,
+      background-color 160ms ease,
+      transform 120ms ease;
   }
 
   .portal-bottom-nav button::before {
@@ -1545,6 +1555,10 @@ footer p {
 
   .portal-bottom-nav button.is-active::before {
     background: var(--primary);
+  }
+
+  .portal-bottom-nav button:active:not(:disabled) {
+    transform: scale(0.94);
   }
 
   .portal-bottom-nav button:disabled {
@@ -1570,6 +1584,11 @@ footer p {
   .portal-view > .form-message,
   .member-portal > .form-message {
     top: 8px;
+  }
+
+  .portal-section-entering {
+    animation: portal-section-arrive 260ms cubic-bezier(0.22, 1, 0.36, 1)
+      both;
   }
 
   .hero {
@@ -1706,6 +1725,17 @@ footer p {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes portal-section-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.992);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 

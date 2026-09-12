@@ -277,6 +277,24 @@ function showHostMessage(message, type = "success") {
   setStatusMessage(hostPortalMessage, message, type);
 }
 
+function animateMobilePortalSection(panel) {
+  if (
+    !window.matchMedia("(max-width: 700px)").matches ||
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  ) {
+    return;
+  }
+
+  panel.classList.remove("portal-section-entering");
+  void panel.offsetWidth;
+  panel.classList.add("portal-section-entering");
+  panel.addEventListener(
+    "animationend",
+    () => panel.classList.remove("portal-section-entering"),
+    { once: true }
+  );
+}
+
 function activatePortalSection(role, targetId, options = {}) {
   const navigation = portalNavigation[role];
 
@@ -306,6 +324,8 @@ function activatePortalSection(role, targetId, options = {}) {
     });
 
   if (!options.moveFocus) return;
+
+  animateMobilePortalSection(targetPanel);
 
   const heading = targetPanel.querySelector("h2");
 

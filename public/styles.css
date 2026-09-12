@@ -1551,10 +1551,14 @@ footer p {
   .portal-bottom-nav button.is-active {
     color: var(--primary-hover);
     background: #fff1e8;
+    animation: portal-tab-highlight-arrive 220ms ease-out both;
   }
 
   .portal-bottom-nav button.is-active::before {
     background: var(--primary);
+    transform-origin: center;
+    animation: portal-tab-indicator-arrive 240ms cubic-bezier(0.22, 1, 0.36, 1)
+      both;
   }
 
   .portal-bottom-nav button:active:not(:disabled) {
@@ -1736,6 +1740,29 @@ footer p {
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes portal-tab-highlight-arrive {
+  0% {
+    background-color: transparent;
+  }
+  55% {
+    background-color: #ffe1cf;
+  }
+  100% {
+    background-color: #fff1e8;
+  }
+}
+
+@keyframes portal-tab-indicator-arrive {
+  from {
+    opacity: 0.25;
+    transform: scaleX(0.2);
+  }
+  to {
+    opacity: 1;
+    transform: scaleX(1);
   }
 }
 

@@ -389,6 +389,13 @@ textarea:focus {
   margin-top: 18px;
 }
 
+#host-login-view .primary-button,
+#member-login-view .primary-button {
+  display: flex;
+  width: min(100%, 280px);
+  margin-inline: auto;
+}
+
 .primary-button:active,
 .secondary-button:active {
   transform: translateY(2px);
@@ -1275,6 +1282,11 @@ footer p {
 
   .event-actions {
     grid-template-columns: 1fr;
+  }
+
+  #host-login-view .primary-button,
+  #member-login-view .primary-button {
+    width: 100%;
   }
 
   .about-section {

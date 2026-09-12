@@ -23,6 +23,10 @@ The server requires `MONGODB_URI` and `SESSION_SECRET`. Set `NODE_ENV=production
 
 When Resend rejects a delivery, TableForAll removes the newly created verification record and reports the delivery failure to the browser. Codes are hashed in MongoDB, expire after 10 minutes, allow five attempts, and have a one-minute resend cooldown.
 
+### Gmail SMTP alternative
+
+For a small demonstration that does not use a custom domain, enable two-step verification on a personal Google account and create a Google App Password for TableForAll. Set `GMAIL_USER` to that Gmail address, `GMAIL_APP_PASSWORD` to the generated app password, and `EMAIL_FROM` to `TableForAll <the-same-address@gmail.com>`. Gmail takes priority when both Gmail and Resend credentials are configured. Never use the normal Google account password or commit an app password.
+
 ## OpenAI meal assistant
 
 The assistant is optional. Set `OPENAI_API_KEY` and `OPENAI_MODEL` on the server to enable it. It uses the official OpenAI Node SDK and Responses API. If either value is absent, the host and member flows, deterministic meal statuses, optimization, and chat remain available, while the Member Portal explains that the assistant is not configured.

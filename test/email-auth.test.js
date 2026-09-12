@@ -51,6 +51,36 @@ test("email service sends clean HTML and text through a mocked Resend client", a
   assert.match(sent.html, /123456/);
 });
 
+test("email service sends through Gmail SMTP when Gmail credentials are configured", async () => {
+  let sent;
+  const service = createEmailService({
+    transporter: {
+      sendMail: async (message) => {
+        sent = message;
+        return { messageId: "gmail-message-1" };
+      },
+    },
+    environment: {
+      NODE_ENV: "production",
+      GMAIL_USER: "tableforall.sender@gmail.com",
+      GMAIL_APP_PASSWORD: "abcd efgh ijkl mnop",
+    },
+    appBaseUrl: "https://table4all.onrender.com",
+  });
+
+  const result = await service.sendVerificationCode({
+    email: "guest@example.test",
+    code: "123456",
+    expiresAt: new Date("2030-01-02T03:04:05.000Z"),
+  });
+
+  assert.deepEqual(result, { id: "gmail-message-1" });
+  assert.equal(sent.from, "TableForAll <tableforall.sender@gmail.com>");
+  assert.equal(sent.to, "guest@example.test");
+  assert.match(sent.text, /123456/);
+  assert.match(sent.html, /123456/);
+});
+
 test("email service turns a provider rejection into a delivery error", async () => {
   const service = createEmailService({
     client: { emails: { send: async () => ({ error: { message: "provider detail" } }) } },

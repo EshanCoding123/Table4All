@@ -806,6 +806,21 @@ footer p {
   accent-color: var(--primary-hover);
 }
 
+.meal-form-actions,
+.meal-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.meal-form-actions .primary-button {
+  width: auto;
+}
+
+.meal-card-actions {
+  margin: 14px 0 18px;
+}
+
 .meal-options-list,
 .members-list {
   display: grid;

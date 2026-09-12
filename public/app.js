@@ -76,6 +76,10 @@ const hostEventSettingsForm = document.querySelector(
 const mealOptionForm = document.querySelector(
   "#meal-option-form"
 );
+const mealOptionHeading = document.querySelector("#meal-option-heading");
+const mealOptionDescription = document.querySelector("#meal-option-description");
+const mealOptionSubmitButton = document.querySelector("#meal-option-submit-button");
+const cancelMealEditButton = document.querySelector("#cancel-meal-edit-button");
 
 const hostMealOptionsList = document.querySelector(
   "#host-meal-options-list"
@@ -153,6 +157,7 @@ const chatElements = {
 };
 
 let activeEvent = null;
+let editingDishId = null;
 let currentUser = null;
 let myEventsRequest = 0;
 let menuAnalysisRequest = 0;
@@ -908,6 +913,47 @@ function appendBlacklistWarning(card, dish) {
   card.append(warning);
 }
 
+function resetMealEditor() {
+  editingDishId = null;
+  mealOptionForm.reset();
+  mealOptionHeading.textContent = "Add a meal option";
+  mealOptionDescription.textContent =
+    "Give members enough information to judge whether a meal may work for them. Unknown information should stay clearly marked.";
+  mealOptionSubmitButton.textContent = "Add meal option";
+  cancelMealEditButton.hidden = true;
+}
+
+function beginMealEdit(dish) {
+  editingDishId = String(dish.id);
+
+  mealOptionForm.elements.name.value = dish.name || "";
+  mealOptionForm.elements.description.value = dish.description || "";
+  setSelectValue(mealOptionForm.elements.category, dish.category || "Other");
+  mealOptionForm.elements.ingredients.value = (dish.ingredients || []).join(", ");
+  mealOptionForm.elements.containsAllergens.value =
+    (dish.containsAllergens || []).join(", ");
+  mealOptionForm.elements.mayContainAllergens.value =
+    (dish.mayContainAllergens || []).join(", ");
+  mealOptionForm.elements.preparationInformation.value =
+    dish.preparationInformation || "";
+  setSelectValue(
+    mealOptionForm.elements.crossContactStatus,
+    dish.crossContactStatus || "unknown"
+  );
+  mealOptionForm.elements.ingredientListComplete.checked =
+    dish.ingredientListComplete === true;
+  mealOptionForm.elements.isPublished.checked = dish.isPublished === true;
+
+  mealOptionHeading.textContent = "Edit meal option";
+  mealOptionDescription.textContent = `Update ${dish.name || "this meal"}, then save your changes.`;
+  mealOptionSubmitButton.textContent = "Save meal option";
+  cancelMealEditButton.hidden = false;
+
+  activatePortalSection("host", "host-add-meal-panel", {
+    moveFocus: true,
+  });
+}
+
 function renderHostMeals(event) {
   hostMealOptionsList.replaceChildren();
 
@@ -939,6 +985,19 @@ function renderHostMeals(event) {
       : "status-review";
 
     mealCard.append(mealName, visibility);
+
+    const actions = document.createElement("div");
+    actions.className = "meal-card-actions";
+
+    const editButton = document.createElement("button");
+    editButton.className = "secondary-button";
+    editButton.type = "button";
+    editButton.textContent = "Edit meal";
+    editButton.setAttribute("aria-label", `Edit ${dish.name || "meal option"}`);
+    editButton.addEventListener("click", () => beginMealEdit(dish));
+
+    actions.append(editButton);
+    mealCard.append(actions);
 
     if (dish.description) {
       const description = document.createElement("p");
@@ -2094,9 +2153,8 @@ mealOptionForm.addEventListener(
       return;
     }
 
-    const button = mealOptionForm.querySelector(
-      'button[type="submit"]'
-    );
+    const button = mealOptionSubmitButton;
+    const dishId = editingDishId;
 
     const formData = new FormData(mealOptionForm);
 
@@ -2130,30 +2188,45 @@ mealOptionForm.addEventListener(
         formData.get("isPublished") === "on",
     };
 
-    setButtonLoading(button, true, "Adding meal...");
+    setButtonLoading(
+      button,
+      true,
+      dishId ? "Saving meal..." : "Adding meal..."
+    );
+
+    let data;
 
     try {
-      const data = await apiRequest(
-        `/api/events/${activeEvent.code}/dishes`,
+      data = await apiRequest(
+        dishId
+          ? `/api/events/${activeEvent.code}/dishes/${encodeURIComponent(dishId)}`
+          : `/api/events/${activeEvent.code}/dishes`,
         {
-          method: "POST",
+          method: dishId ? "PATCH" : "POST",
           body: JSON.stringify(mealInformation),
         }
       );
-
-      mealOptionForm.reset();
-      showHostPortal(data.event);
-      activatePortalSection("host", "host-meals-panel", {
-        moveFocus: true,
-      });
-      showHostMessage(data.message, "success");
     } catch (error) {
       showHostMessage(error.message, "error");
     } finally {
       setButtonLoading(button, false);
     }
+
+    if (!data) return;
+
+    resetMealEditor();
+    showHostPortal(data.event);
+    activatePortalSection("host", "host-meals-panel", {
+      moveFocus: true,
+    });
+    showHostMessage(data.message, "success");
   }
 );
+
+cancelMealEditButton.addEventListener("click", () => {
+  resetMealEditor();
+  mealOptionHeading.focus();
+});
 
 copyEventCodeButton.addEventListener(
   "click",

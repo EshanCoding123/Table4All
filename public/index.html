@@ -668,9 +668,9 @@
     </section>
 
     <section id="host-add-meal-panel" class="form-card portal-panel">
-      <h2>Add a meal option</h2>
+      <h2 id="meal-option-heading">Add a meal option</h2>
 
-      <p>
+      <p id="meal-option-description">
         Give members enough information to judge whether a meal may
         work for them. Unknown information should stay clearly marked.
       </p>
@@ -803,9 +803,24 @@
           </label>
         </div>
 
-        <button class="primary-button" type="submit">
-          Add meal option
-        </button>
+        <div class="meal-form-actions">
+          <button
+            id="meal-option-submit-button"
+            class="primary-button"
+            type="submit"
+          >
+            Add meal option
+          </button>
+
+          <button
+            id="cancel-meal-edit-button"
+            class="secondary-button"
+            type="button"
+            hidden
+          >
+            Cancel edit
+          </button>
+        </div>
       </form>
     </section>
 

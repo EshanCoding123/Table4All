@@ -2,6 +2,8 @@
 
 TableForAll is an Express and MongoDB application for planning event meals around guests' self-reported allergy information. It includes verified host and member sessions, deterministic meal reviews, menu coverage analysis, event room chat, and an optional member meal-information assistant.
 
+Authentication is passwordless. New users choose **Sign up** and confirm a six-digit email code; returning users choose **Log in** and receive a new code. After signing in, users can create an event, join with an event code, or reopen an event from **Your events**.
+
 ## Local setup
 
 1. Install Node.js and make a MongoDB deployment available.

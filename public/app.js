@@ -10,6 +10,13 @@ const chooseHostButton = document.querySelector(
 const chooseMemberButton = document.querySelector(
   "#choose-member-button"
 );
+const chooseLoginButton = document.querySelector("#choose-login-button");
+const chooseSignupButton = document.querySelector("#choose-signup-button");
+const loginForm = document.querySelector("#login-form");
+const signupForm = document.querySelector("#signup-form");
+const joinEventForm = document.querySelector("#join-event-form");
+const joinEventCodeInput = document.querySelector("#join-event-code");
+const yourEventsList = document.querySelector("#your-events-list");
 
 const hostLoginForm = document.querySelector("#host-login-form");
 const memberLoginForm = document.querySelector(
@@ -113,6 +120,8 @@ const chatElements = {
 };
 
 let activeEvent = null;
+let currentUser = null;
+let myEventsRequest = 0;
 let menuAnalysisRequest = 0;
 let menuAnalysisPending = false;
 let menuAnalysisEventCode = null;
@@ -289,7 +298,7 @@ async function restoreCurrentEvent() {
   );
 
   if (!storedEvent) {
-    return;
+    return false;
   }
 
   let currentEvent;
@@ -298,12 +307,12 @@ async function restoreCurrentEvent() {
     currentEvent = JSON.parse(storedEvent);
   } catch {
     sessionStorage.removeItem("tableForAllCurrentEvent");
-    return;
+    return false;
   }
 
   if (!/^[A-Z0-9]{6}$/.test(currentEvent?.eventCode || "")) {
     sessionStorage.removeItem("tableForAllCurrentEvent");
-    return;
+    return false;
   }
 
   try {
@@ -314,7 +323,7 @@ async function restoreCurrentEvent() {
     if (
       sessionStorage.getItem("tableForAllCurrentEvent") !== storedEvent
     ) {
-      return;
+      return false;
     }
 
     if (data.event.role === "host") {
@@ -322,8 +331,106 @@ async function restoreCurrentEvent() {
     } else {
       showMemberPortal(data.event);
     }
+    return true;
   } catch (error) {
+    sessionStorage.removeItem("tableForAllCurrentEvent");
     showMessage(error.message);
+    return false;
+  }
+}
+
+async function restoreApplication() {
+  try {
+    const data = await apiRequest("/api/auth/me");
+    currentUser = data.user;
+    signOutButton.classList.remove("hidden");
+
+    const eventRestored = await restoreCurrentEvent();
+    if (!eventRestored) {
+      showView("role-view");
+      loadMyEvents();
+    }
+  } catch {
+    currentUser = null;
+    sessionStorage.removeItem("tableForAllCurrentEvent");
+    signOutButton.classList.add("hidden");
+
+    if (pendingAuthentication) {
+      showView("verification-view");
+      verificationInstructions.textContent =
+        "Check your email for the six-digit confirmation code. It expires in 10 minutes.";
+    } else {
+      showView("account-view");
+    }
+  }
+}
+
+function renderMyEvents(events) {
+  yourEventsList.replaceChildren();
+
+  if (!events.length) {
+    const emptyMessage = document.createElement("p");
+    emptyMessage.textContent = "You have not created or joined an event yet.";
+    yourEventsList.append(emptyMessage);
+    return;
+  }
+
+  events.forEach((event) => {
+    const item = document.createElement("article");
+    item.className = "your-event-item";
+
+    const details = document.createElement("div");
+    const heading = document.createElement("h3");
+    heading.textContent = event.name;
+
+    const summary = document.createElement("p");
+    const role = event.role === "host" ? "Host" : "Member";
+    summary.textContent = `${role} · ${formatEventDate(event.eventDate)} · Code ${event.code}`;
+    details.append(heading, summary);
+
+    const openButton = document.createElement("button");
+    openButton.className = "secondary-button";
+    openButton.type = "button";
+    openButton.textContent = "Open";
+    openButton.addEventListener("click", async () => {
+      setButtonLoading(openButton, true, "Opening...");
+      try {
+        const data = await apiRequest(`/api/events/${encodeURIComponent(event.code)}`);
+        if (data.event.role === "host") {
+          showHostPortal(data.event);
+        } else {
+          showMemberPortal(data.event);
+        }
+      } catch (error) {
+        showMessage(error.message);
+      } finally {
+        setButtonLoading(openButton, false);
+      }
+    });
+
+    item.append(details, openButton);
+    yourEventsList.append(item);
+  });
+}
+
+async function loadMyEvents() {
+  if (!currentUser) return;
+
+  const requestId = ++myEventsRequest;
+  const loadingMessage = document.createElement("p");
+  loadingMessage.textContent = "Loading your events…";
+  yourEventsList.replaceChildren(loadingMessage);
+
+  try {
+    const data = await apiRequest("/api/events/mine");
+    if (requestId !== myEventsRequest || !currentUser) return;
+    renderMyEvents(Array.isArray(data.events) ? data.events : []);
+  } catch (error) {
+    if (requestId !== myEventsRequest || !currentUser) return;
+    const errorMessage = document.createElement("p");
+    errorMessage.className = "field-help";
+    errorMessage.textContent = error.message;
+    yourEventsList.replaceChildren(errorMessage);
   }
 }
 
@@ -1230,12 +1337,20 @@ refreshMemberMealsButton.addEventListener("click", async () => {
   }
 });
 
+chooseLoginButton.addEventListener("click", () => {
+  showView("login-view");
+});
+
+chooseSignupButton.addEventListener("click", () => {
+  showView("signup-view");
+});
+
 chooseHostButton.addEventListener("click", () => {
-  showView("host-login-view");
+  showView(currentUser ? "create-event-view" : "login-view");
 });
 
 chooseMemberButton.addEventListener("click", () => {
-  showView("member-login-view");
+  showView(currentUser ? "join-event-view" : "login-view");
 });
 
 document.querySelectorAll(".back-button").forEach((button) => {
@@ -1246,17 +1361,92 @@ document.querySelectorAll(".back-button").forEach((button) => {
       currentView.id === "verification-view" &&
       pendingAuthentication
     ) {
-      showView(
-        pendingAuthentication.intent === "host"
-          ? "host-login-view"
-          : "member-login-view"
-      );
+      const previousViews = {
+        host: "host-login-view",
+        join: "member-login-view",
+        login: "login-view",
+        signup: "signup-view",
+      };
+      showView(previousViews[pendingAuthentication.intent] || "account-view");
 
       return;
     }
 
-    showView("role-view");
+    showView(button.dataset.backView || (currentUser ? "role-view" : "account-view"));
   });
+});
+
+loginForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  clearMessage();
+
+  const button = loginForm.querySelector('button[type="submit"]');
+  const formData = new FormData(loginForm);
+  const authentication = {
+    email: formData.get("email").trim().toLowerCase(),
+    intent: "login",
+  };
+
+  setButtonLoading(button, true, "Sending login code...");
+  try {
+    await requestVerification(authentication);
+  } catch (error) {
+    showMessage(error.message);
+  } finally {
+    setButtonLoading(button, false);
+  }
+});
+
+signupForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  clearMessage();
+
+  const button = signupForm.querySelector('button[type="submit"]');
+  const formData = new FormData(signupForm);
+  const authentication = {
+    name: formData.get("name").trim(),
+    email: formData.get("email").trim().toLowerCase(),
+    intent: "signup",
+  };
+
+  setButtonLoading(button, true, "Creating account...");
+  try {
+    await requestVerification(authentication);
+  } catch (error) {
+    showMessage(error.message);
+  } finally {
+    setButtonLoading(button, false);
+  }
+});
+
+joinEventForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  clearMessage();
+
+  const button = joinEventForm.querySelector('button[type="submit"]');
+  const formData = new FormData(joinEventForm);
+  const eventCode = formData.get("eventCode").trim().toUpperCase();
+
+  setButtonLoading(button, true, "Joining event...");
+  try {
+    const data = await apiRequest(`/api/events/${eventCode}/join`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    });
+
+    if (data.event.role !== "member") {
+      throw new Error(
+        "This account hosts that event and cannot join it as a member."
+      );
+    }
+
+    joinEventForm.reset();
+    showMemberPortal(data.event);
+  } catch (error) {
+    showMessage(error.message);
+  } finally {
+    setButtonLoading(button, false);
+  }
 });
 
 hostLoginForm.addEventListener("submit", async (event) => {
@@ -1349,12 +1539,27 @@ verificationForm.addEventListener("submit", async (event) => {
       }
     );
 
+    currentUser = verification.user;
     signOutButton.classList.remove("hidden");
     verificationForm.reset();
     sessionStorage.removeItem("tableForAllPendingAuthentication");
     pendingAuthentication = null;
     resendAvailableAt = 0;
     updateResendCooldown();
+
+    if (["login", "signup"].includes(verification.intent)) {
+      loginForm.reset();
+      signupForm.reset();
+      showView("role-view");
+      showMessage(
+        verification.intent === "signup"
+          ? "Your account was created and verified."
+          : "You are logged in.",
+        "success"
+      );
+      loadMyEvents();
+      return;
+    }
 
     if (verification.intent === "host") {
       showView("create-event-view");
@@ -1608,6 +1813,13 @@ memberCodeInput.addEventListener("input", () => {
     .slice(0, 6);
 });
 
+joinEventCodeInput.addEventListener("input", () => {
+  joinEventCodeInput.value = joinEventCodeInput.value
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "")
+    .slice(0, 6);
+});
+
 verificationInput.addEventListener("input", () => {
   verificationInput.value = verificationInput.value
     .replace(/\D/g, "")
@@ -1616,7 +1828,8 @@ verificationInput.addEventListener("input", () => {
 
 homeButton.addEventListener("click", () => {
   closeRoomChat();
-  showView("role-view");
+  showView(currentUser ? "role-view" : "account-view");
+  if (currentUser) loadMyEvents();
 });
 
 signOutButton.addEventListener("click", async () => {
@@ -1637,14 +1850,16 @@ signOutButton.addEventListener("click", async () => {
 
   pendingAuthentication = null;
   activeEvent = null;
+  currentUser = null;
+  myEventsRequest += 1;
   closeRoomChat();
   signOutButton.classList.add("hidden");
 
-  showView("role-view");
+  showView("account-view");
   showMessage("You have signed out.", "success");
 });
 
 setDefaultEventDate();
 showStartupScreen();
-restoreCurrentEvent();
+restoreApplication();
 window.setInterval(() => refreshMenuOptimization(true), 30000);

@@ -25,7 +25,7 @@ const verificationCodeSchema = new mongoose.Schema(
     intent: {
       type: String,
       required: true,
-      enum: ["host", "join", "member"],
+      enum: ["host", "join", "member", "signup", "login"],
     },
 
     eventCode: {

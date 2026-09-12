@@ -307,3 +307,128 @@ test("successful verification invalidates the code and preserves the regenerated
   assert.equal(session.email, verification.email);
   assert.equal(setup.deleted(), 1);
 });
+
+test("login sends a code only for an existing verified account", async () => {
+  let created;
+  const router = createAuthRouter({
+    UserModel: {
+      findOne: async () => ({
+        _id: "user-1",
+        name: "Existing Member",
+        email: "member@example.test",
+        emailVerified: true,
+      }),
+    },
+    VerificationCodeModel: {
+      findOne: async () => null,
+      deleteMany: async () => {},
+      create: async (value) => { created = { _id: "code-1", ...value }; return created; },
+      findByIdAndDelete: async () => {},
+    },
+    emailService: { sendVerificationCode: async () => {} },
+    sessionSecret: "test-session-secret",
+  });
+  const res = responseRecorder();
+
+  await authHandler(router, "/request-code")({
+    body: { email: " MEMBER@example.test ", intent: "login" },
+  }, res);
+
+  assert.equal(res.statusCode, 201);
+  assert.equal(created.name, "Existing Member");
+  assert.equal(created.email, "member@example.test");
+  assert.equal(created.intent, "login");
+});
+
+test("signup directs an existing verified account to log in", async () => {
+  const router = createAuthRouter({
+    UserModel: {
+      findOne: async () => ({ emailVerified: true }),
+    },
+    emailService: { sendVerificationCode: async () => {} },
+    sessionSecret: "test-session-secret",
+  });
+  const res = responseRecorder();
+
+  await authHandler(router, "/request-code")({
+    body: {
+      name: "Existing Member",
+      email: "member@example.test",
+      intent: "signup",
+    },
+  }, res);
+
+  assert.equal(res.statusCode, 409);
+  assert.match(res.body.message, /log in/i);
+});
+
+test("a valid login code starts a session without replacing the account", async () => {
+  const verification = {
+    _id: "code-1",
+    email: "member@example.test",
+    name: "Existing Member",
+    intent: "login",
+    attempts: 0,
+    codeHash: hashVerificationCode("member@example.test", "123456", "test-session-secret"),
+    expiresAt: new Date("2030-01-01T00:10:00.000Z"),
+  };
+  let deleted = false;
+  let accountReplaced = false;
+  const router = createAuthRouter({
+    UserModel: {
+      findOne: async () => ({
+        _id: "user-1",
+        name: "Existing Member",
+        email: verification.email,
+        emailVerified: true,
+      }),
+      findOneAndUpdate: async () => { accountReplaced = true; },
+    },
+    VerificationCodeModel: {
+      findOne: () => ({ sort: async () => verification }),
+      findByIdAndDelete: async () => { deleted = true; },
+    },
+    emailService: { sendVerificationCode: async () => {} },
+    sessionSecret: "test-session-secret",
+    now: () => new Date("2030-01-01T00:05:00.000Z"),
+  });
+  const session = sessionRecorder();
+  const res = responseRecorder();
+
+  await authHandler(router, "/verify-code")({
+    body: { email: verification.email, code: "123456", intent: "login" },
+    session,
+  }, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.intent, "login");
+  assert.equal(session.userId, "user-1");
+  assert.equal(accountReplaced, false);
+  assert.equal(deleted, true);
+});
+
+test("a valid signup code creates the verified account session", async () => {
+  const verification = {
+    _id: "code-1",
+    email: "new-member@example.test",
+    name: "New Member",
+    intent: "signup",
+    attempts: 0,
+    codeHash: hashVerificationCode("new-member@example.test", "123456", "test-session-secret"),
+    expiresAt: new Date("2030-01-01T00:10:00.000Z"),
+  };
+  const setup = verificationRouter(verification);
+  const session = sessionRecorder();
+  const res = responseRecorder();
+
+  await authHandler(setup.router, "/verify-code")({
+    body: { email: verification.email, code: "123456", intent: "signup" },
+    session,
+  }, res);
+
+  assert.equal(res.statusCode, 200);
+  assert.equal(res.body.intent, "signup");
+  assert.equal(session.userId, "user-1");
+  assert.equal(session.email, verification.email);
+  assert.equal(setup.deleted(), 1);
+});

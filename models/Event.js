@@ -1,26 +1,56 @@
 const mongoose = require("mongoose");
 
-const participantSchema = new mongoose.Schema({
-  name: {
+const memberSchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
+
+  displayName: {
     type: String,
     required: true,
     trim: true,
     maxlength: 50,
   },
 
-  allergies: {
-    type: [String],
-    default: [],
+  role: {
+    type: String,
+    enum: ["host", "member"],
+    required: true,
   },
 
-  otherAllergies: {
-    type: [String],
-    default: [],
-  },
+  allergies: [
+    {
+      type: String,
+      trim: true,
+      lowercase: true,
+    },
+  ],
+
+  otherAllergies: [
+    {
+      type: String,
+      trim: true,
+      lowercase: true,
+    },
+  ],
 
   profileComplete: {
     type: Boolean,
     default: false,
+  },
+
+  crossContactConcern: {
+    type: Boolean,
+    default: false,
+  },
+
+  note: {
+    type: String,
+    trim: true,
+    maxlength: 500,
+    default: "",
   },
 
   joinedAt: {
@@ -34,36 +64,64 @@ const dishSchema = new mongoose.Schema({
     type: String,
     required: true,
     trim: true,
-    maxlength: 100,
+    maxlength: 120,
+  },
+
+  description: {
+    type: String,
+    trim: true,
+    maxlength: 1000,
+    default: "",
   },
 
   category: {
     type: String,
-    enum: ["entree", "side", "dessert", "drink", "other"],
-    default: "other",
+    enum: [
+      "Main dish",
+      "Side dish",
+      "Dessert",
+      "Drink",
+      "Snack",
+      "Other",
+      // Keep existing dishes valid when their event is saved again.
+      "entree",
+      "side",
+      "dessert",
+      "drink",
+      "other",
+    ],
+    default: "Other",
   },
 
-  contributorName: {
-    type: String,
+  addedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
     required: true,
-    trim: true,
-    maxlength: 50,
   },
 
-  ingredients: {
-    type: [String],
-    default: [],
-  },
+  ingredients: [
+    {
+      type: String,
+      trim: true,
+      lowercase: true,
+    },
+  ],
 
-  containsAllergens: {
-    type: [String],
-    default: [],
-  },
+  containsAllergens: [
+    {
+      type: String,
+      trim: true,
+      lowercase: true,
+    },
+  ],
 
-  mayContainAllergens: {
-    type: [String],
-    default: [],
-  },
+  mayContainAllergens: [
+    {
+      type: String,
+      trim: true,
+      lowercase: true,
+    },
+  ],
 
   ingredientListComplete: {
     type: Boolean,
@@ -72,13 +130,20 @@ const dishSchema = new mongoose.Schema({
 
   preparationInformation: {
     type: String,
-    enum: [
-      "not-provided",
-      "shared-equipment",
-      "may-contain",
-      "reported-separate",
-    ],
-    default: "not-provided",
+    trim: true,
+    maxlength: 1000,
+    default: "",
+  },
+
+  crossContactStatus: {
+    type: String,
+    enum: ["unknown", "possible", "reported-separate"],
+    default: "unknown",
+  },
+
+  isPublished: {
+    type: Boolean,
+    default: true,
   },
 
   addedAt: {
@@ -106,6 +171,13 @@ const eventSchema = new mongoose.Schema(
       maxlength: 80,
     },
 
+    description: {
+      type: String,
+      trim: true,
+      maxlength: 1000,
+      default: "",
+    },
+
     eventType: {
       type: String,
       enum: ["potluck", "dinner", "party", "club-event", "other"],
@@ -117,15 +189,50 @@ const eventSchema = new mongoose.Schema(
       required: true,
     },
 
-    hostName: {
-      type: String,
+    host: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
       required: true,
-      trim: true,
-      maxlength: 50,
     },
 
-    participants: {
-      type: [participantSchema],
+    status: {
+      type: String,
+      enum: ["draft", "open", "closed"],
+      default: "open",
+    },
+
+    foodBlacklist: {
+      type: [{ type: String, trim: true, lowercase: true }],
+      // Preserve access to legacy blacklist fields until the host saves this list.
+      default: undefined,
+    },
+
+    foodAllergenBlacklist: [
+      {
+        type: String,
+        trim: true,
+        lowercase: true,
+      },
+    ],
+
+    ingredientBlacklist: [
+      {
+        type: String,
+        trim: true,
+        lowercase: true,
+      },
+    ],
+
+    blockedEmails: [
+      {
+        type: String,
+        trim: true,
+        lowercase: true,
+      },
+    ],
+
+    members: {
+      type: [memberSchema],
       default: [],
     },
 

@@ -6,6 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0"
     />
+
     <meta
       name="description"
       content="Plan shared meals around guests' food allergies."
@@ -14,198 +15,827 @@
     <title>TableForAll</title>
 
     <link rel="stylesheet" href="styles.css" />
+    <script src="/socket.io/socket.io.js" defer></script>
     <script src="app.js" defer></script>
   </head>
 
   <body>
-    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <a class="skip-link" href="#main-content">
+      Skip to main content
+    </a>
 
     <header class="site-header">
-      <a class="logo" href="/" aria-label="TableForAll home">
+      <button class="logo logo-button" id="home-button" type="button">
         TableForAll
-      </a>
+      </button>
 
-      <nav aria-label="Main navigation">
-        <a href="#how-it-works">How it works</a>
-        <a href="#about">About</a>
-      </nav>
+      <button
+        class="secondary-button hidden"
+        id="sign-out-button"
+        type="button"
+      >
+        Sign out
+      </button>
     </header>
 
     <main id="main-content">
-      <section class="hero">
-        <div class="hero-copy">
-          <p class="eyebrow">Food allergy planning for shared meals</p>
-
-          <h1>Plan a meal that includes everyone.</h1>
-
-          <p class="hero-description">
-            Collect allergy information, check every dish, and find the
-            smallest menu changes needed to give every guest more options.
-          </p>
-
-          <button class="secondary-button" id="demo-event-button" type="button">
-            Try a sample event
-          </button>
-        </div>
-
-        <div class="event-actions">
-          <section class="form-card" aria-labelledby="create-heading">
-            <h2 id="create-heading">Create an event</h2>
-
-            <form id="create-event-form">
-              <div class="form-group">
-                <label for="event-name">Event name</label>
-                <input
-                  id="event-name"
-                  name="eventName"
-                  type="text"
-                  maxlength="80"
-                  placeholder="Sunday dinner"
-                  required
-                />
-              </div>
-
-              <div class="form-group">
-                <label for="host-name">Your name</label>
-                <input
-                  id="host-name"
-                  name="hostName"
-                  type="text"
-                  maxlength="50"
-                  placeholder="Rohan"
-                  required
-                />
-              </div>
-
-              <div class="form-group">
-                <label for="event-type">Type of meal</label>
-                <select id="event-type" name="eventType">
-                  <option value="potluck">Potluck</option>
-                  <option value="dinner">Dinner</option>
-                  <option value="party">Party</option>
-                  <option value="club-event">Club event</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-
-              <div class="form-group">
-                <label for="event-date">Date</label>
-                <input
-                  id="event-date"
-                  name="eventDate"
-                  type="date"
-                  required
-                />
-              </div>
-
-              <button class="primary-button" type="submit">
-                Create shared table
-              </button>
-            </form>
-          </section>
-
-          <section class="form-card join-card" aria-labelledby="join-heading">
-            <h2 id="join-heading">Join an event</h2>
-
-            <p>Enter the six-character code sent by the host.</p>
-
-            <form id="join-event-form">
-              <div class="form-group">
-                <label for="guest-name">Your name</label>
-                <input
-                  id="guest-name"
-                  name="guestName"
-                  type="text"
-                  maxlength="50"
-                  required
-                />
-              </div>
-
-              <div class="form-group">
-                <label for="event-code">Event code</label>
-                <input
-                  id="event-code"
-                  name="eventCode"
-                  type="text"
-                  minlength="6"
-                  maxlength="6"
-                  autocomplete="off"
-                  spellcheck="false"
-                  required
-                />
-              </div>
-
-              <button class="primary-button" type="submit">
-                Join event
-              </button>
-            </form>
-          </section>
-        </div>
-      </section>
-
       <p
         class="form-message"
-        id="form-message"
+        id="app-message"
         role="status"
         aria-live="polite"
       ></p>
 
-      <section class="how-it-works" id="how-it-works">
+      <!-- Choose whether to host or join. -->
+      <section class="app-view hero" id="role-view">
+        <div class="hero-copy">
+          <p class="eyebrow">
+            Food allergy planning for shared meals
+          </p>
+
+          <h1>Plan a meal that includes everyone.</h1>
+
+          <p class="hero-description">
+            Create a shared meal, collect allergy information, and
+            identify options that need more review.
+          </p>
+        </div>
+
+        <div class="event-actions">
+          <article class="form-card">
+            <h2>Host an event</h2>
+
+            <p>
+              Create the event, add meal choices, and invite members
+              with a room code.
+            </p>
+
+            <button
+              class="primary-button"
+              id="choose-host-button"
+              type="button"
+            >
+              Host an event
+            </button>
+          </article>
+
+          <article class="form-card join-card">
+            <h2>Join an event</h2>
+
+            <p>
+              Use a room code to join, add your allergies, and review
+              the posted meal options.
+            </p>
+
+            <button
+              class="primary-button"
+              id="choose-member-button"
+              type="button"
+            >
+              Join an event
+            </button>
+          </article>
+        </div>
+      </section>
+
+      <!-- Host email screen. -->
+      <section class="app-view hidden" id="host-login-view">
         <div class="section-heading">
-          <p class="eyebrow">How it works</p>
-          <h2>One shared plan, with fewer unanswered questions.</h2>
+          <p class="eyebrow">Host an event</p>
+          <h1>Confirm your email first.</h1>
+
+          <p>
+            We will send you a six-digit code before creating your
+            event.
+          </p>
         </div>
 
-        <div class="steps">
-          <article class="step-card">
-            <span class="step-number" aria-hidden="true">1</span>
-            <h3>Guests add their needs</h3>
-            <p>
-              Each guest privately records the food allergens they need
-              to avoid.
-            </p>
-          </article>
+        <section class="form-card">
+          <form id="host-login-form">
+            <div class="form-group">
+              <label for="host-name">Your name</label>
+              <input
+                id="host-name"
+                name="name"
+                type="text"
+                maxlength="50"
+                autocomplete="name"
+                required
+              />
+            </div>
 
-          <article class="step-card">
-            <span class="step-number" aria-hidden="true">2</span>
-            <h3>Everyone adds dishes</h3>
-            <p>
-              Contributors provide ingredients, allergen statements, and
-              preparation information.
-            </p>
-          </article>
+            <div class="form-group">
+              <label for="host-email">Email address</label>
+              <input
+                id="host-email"
+                name="email"
+                type="email"
+                maxlength="254"
+                autocomplete="email"
+                required
+              />
+            </div>
 
-          <article class="step-card">
-            <span class="step-number" aria-hidden="true">3</span>
-            <h3>The menu is checked</h3>
-            <p>
-              TableForAll finds conflicts, missing details, and guests who
-              may need additional choices.
-            </p>
-          </article>
-        </div>
+            <button class="primary-button" type="submit">
+              Send confirmation code
+            </button>
+          </form>
+
+          <button class="secondary-button back-button" type="button">
+            Back
+          </button>
+        </section>
       </section>
 
-      <section class="about-section" id="about">
+      <!-- Member email and room-code screen. -->
+      <section class="app-view hidden" id="member-login-view">
+        <div class="section-heading">
+          <p class="eyebrow">Join an event</p>
+          <h1>Enter your invitation details.</h1>
+        </div>
+
+        <section class="form-card">
+          <form id="member-login-form">
+            <div class="form-group">
+              <label for="member-code">Event code</label>
+              <input
+                id="member-code"
+                name="eventCode"
+                type="text"
+                minlength="6"
+                maxlength="6"
+                autocomplete="off"
+                spellcheck="false"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="member-name">Your name</label>
+              <input
+                id="member-name"
+                name="name"
+                type="text"
+                maxlength="50"
+                autocomplete="name"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="member-email">Email address</label>
+              <input
+                id="member-email"
+                name="email"
+                type="email"
+                maxlength="254"
+                autocomplete="email"
+                required
+              />
+            </div>
+
+            <button class="primary-button" type="submit">
+              Send confirmation code
+            </button>
+          </form>
+
+          <button class="secondary-button back-button" type="button">
+            Back
+          </button>
+        </section>
+      </section>
+
+      <!-- Verification-code screen. -->
+      <section class="app-view hidden" id="verification-view">
+        <div class="section-heading">
+          <p class="eyebrow">Email confirmation</p>
+          <h1>Enter your six-digit code.</h1>
+
+          <p id="verification-instructions">
+            Check your email for the confirmation code.
+          </p>
+        </div>
+
+        <section class="form-card">
+          <form id="verification-form">
+            <div class="form-group">
+              <label for="verification-code">
+                Confirmation code
+              </label>
+
+              <input
+                id="verification-code"
+                name="code"
+                type="text"
+                inputmode="numeric"
+                autocomplete="one-time-code"
+                pattern="[0-9]{6}"
+                minlength="6"
+                maxlength="6"
+                required
+              />
+            </div>
+
+            <button class="primary-button" type="submit">
+              Confirm email
+            </button>
+          </form>
+
+          <button
+            class="secondary-button"
+            id="resend-code-button"
+            type="button"
+          >
+            Send another code
+          </button>
+
+          <p id="resend-code-status" class="field-help" role="status" aria-live="polite"></p>
+
+          <button class="secondary-button back-button" type="button">
+            Back
+          </button>
+        </section>
+      </section>
+
+      <!-- A verified host creates the event here. -->
+      <section class="app-view hidden" id="create-event-view">
+        <div class="section-heading">
+          <p class="eyebrow">Email confirmed</p>
+          <h1>Create your event.</h1>
+
+          <p>
+            After this step, you will enter the host portal
+            automatically.
+          </p>
+        </div>
+
+        <section class="form-card">
+          <form id="new-event-form">
+            <div class="form-group">
+              <label for="event-name">Event name</label>
+              <input
+                id="event-name"
+                name="eventName"
+                type="text"
+                maxlength="80"
+                placeholder="Community potluck"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="event-description">
+                Event description
+              </label>
+
+              <textarea
+                id="event-description"
+                name="description"
+                maxlength="1000"
+                rows="5"
+                placeholder="Add information guests should know."
+              ></textarea>
+            </div>
+
+            <div class="form-group">
+              <label for="event-type">Type of meal</label>
+
+              <select id="event-type" name="eventType">
+                <option value="potluck">Potluck</option>
+                <option value="dinner">Dinner</option>
+                <option value="party">Party</option>
+                <option value="club-event">Club event</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="event-date">Date</label>
+              <input
+                id="event-date"
+                name="eventDate"
+                type="date"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="food-blacklist">
+                Event food blacklist
+              </label>
+
+              <textarea
+                id="food-blacklist"
+                name="foodBlacklist"
+                rows="3"
+                placeholder="Example: peanuts, sesame, shellfish"
+              ></textarea>
+
+              <p>
+                Separate ingredients with commas. These ingredients
+                will be flagged across the event.
+              </p>
+            </div>
+
+            <button class="primary-button" type="submit">
+              Create event
+            </button>
+          </form>
+        </section>
+      </section>
+
+<section
+  id="host-portal-view"
+  class="app-view portal-view hidden"
+  aria-labelledby="host-event-heading"
+>
+  <div class="portal-heading">
+    <div>
+      <p class="eyebrow">Host portal</p>
+      <h1 id="host-event-heading">Your event</h1>
+      <p id="host-event-summary">
+        Manage the event, restrictions, meal options, and members.
+      </p>
+    </div>
+
+    <aside class="event-code-card" aria-label="Event join code">
+      <span>Join code</span>
+      <strong id="host-event-code">------</strong>
+
+      <button
+        id="copy-event-code-button"
+        class="secondary-button"
+        type="button"
+      >
+        Copy code
+      </button>
+    </aside>
+  </div>
+
+  <div
+    id="host-portal-message"
+    class="form-message"
+    role="status"
+    aria-live="polite"
+    hidden
+  ></div>
+
+  <div class="portal-grid">
+    <section class="form-card portal-panel">
+      <h2>Event details</h2>
+
+      <p>
+        Update the information members see when they join.
+      </p>
+
+      <form id="host-event-settings-form">
+        <div class="form-group">
+          <label for="host-event-name">Event name</label>
+          <input
+            id="host-event-name"
+            name="eventName"
+            type="text"
+            maxlength="120"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="host-event-description">
+            Event description
+          </label>
+
+          <textarea
+            id="host-event-description"
+            name="description"
+            rows="4"
+            maxlength="2000"
+          ></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="host-event-type">Type of meal</label>
+
+          <select
+            id="host-event-type"
+            name="eventType"
+            required
+          >
+            <option value="potluck">Potluck</option>
+            <option value="dinner">Dinner</option>
+            <option value="party">Party</option>
+            <option value="club-event">Club event</option>
+            <option value="other">Other</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="host-event-date">Date</label>
+
+          <input
+            id="host-event-date"
+            name="eventDate"
+            type="date"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="host-food-blacklist">
+            Event food blacklist
+          </label>
+
+          <textarea
+            id="host-food-blacklist"
+            name="foodBlacklist"
+            rows="3"
+            placeholder="For example: peanuts, sesame, shellfish"
+          ></textarea>
+
+          <p class="field-help">
+            Separate ingredients with commas. These ingredients will
+            be flagged on every meal option.
+          </p>
+        </div>
+
+        <div class="form-group">
+          <label for="host-event-status">Event status</label>
+
+          <select
+            id="host-event-status"
+            name="status"
+          >
+            <option value="open">Open for members</option>
+            <option value="closed">Closed to new members</option>
+            <option value="draft">Draft</option>
+          </select>
+        </div>
+
+        <button class="primary-button" type="submit">
+          Save event details
+        </button>
+      </form>
+    </section>
+
+    <section class="form-card portal-panel">
+      <h2>Add a meal option</h2>
+
+      <p>
+        Give members enough information to judge whether a meal may
+        work for them. Unknown information should stay clearly marked.
+      </p>
+
+      <form id="meal-option-form">
+        <div class="form-group">
+          <label for="meal-name">Meal name</label>
+
+          <input
+            id="meal-name"
+            name="name"
+            type="text"
+            maxlength="120"
+            placeholder="For example: Vegetable pasta"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="meal-description">Description</label>
+
+          <textarea
+            id="meal-description"
+            name="description"
+            rows="3"
+            maxlength="1000"
+            placeholder="Briefly describe this meal."
+          ></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="meal-category">Category</label>
+
+          <select id="meal-category" name="category">
+            <option value="Main dish">Main dish</option>
+            <option value="Side dish">Side dish</option>
+            <option value="Dessert">Dessert</option>
+            <option value="Drink">Drink</option>
+            <option value="Snack">Snack</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="meal-ingredients">Ingredients</label>
+
+          <textarea
+            id="meal-ingredients"
+            name="ingredients"
+            rows="4"
+            placeholder="For example: pasta, tomato, garlic, olive oil"
+          ></textarea>
+
+          <p class="field-help">
+            Separate ingredients with commas.
+          </p>
+        </div>
+
+        <div class="form-group">
+          <label for="meal-contains-allergens">
+            Known allergens
+          </label>
+
+          <input
+            id="meal-contains-allergens"
+            name="containsAllergens"
+            type="text"
+            placeholder="For example: wheat, milk"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="meal-may-contain-allergens">
+            May contain or cross-contact risks
+          </label>
+
+          <input
+            id="meal-may-contain-allergens"
+            name="mayContainAllergens"
+            type="text"
+            placeholder="For example: peanuts, tree nuts"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="meal-preparation-information">
+            Preparation information
+          </label>
+
+          <textarea
+            id="meal-preparation-information"
+            name="preparationInformation"
+            rows="3"
+            placeholder="For example: prepared in a shared kitchen"
+          ></textarea>
+        </div>
+
+        <div class="form-group">
+          <label for="meal-cross-contact-status">Cross-contact information</label>
+          <select id="meal-cross-contact-status" name="crossContactStatus">
+            <option value="unknown">Unknown or not confirmed</option>
+            <option value="possible">Possible cross-contact during preparation</option>
+            <option value="reported-separate">I report separate preparation and equipment</option>
+          </select>
+          <p class="field-help">Choose only what you can report. Preparation notes alone do not confirm cross-contact information.</p>
+        </div>
+
+        <div class="checkbox-group">
+          <label class="checkbox-label">
+            <input
+              name="ingredientListComplete"
+              type="checkbox"
+            />
+
+            <span>
+              I entered the complete ingredient list
+            </span>
+          </label>
+
+          <label class="checkbox-label">
+            <input
+              name="isPublished"
+              type="checkbox"
+              checked
+            />
+
+            <span>
+              Show this meal option to members
+            </span>
+          </label>
+        </div>
+
+        <button class="primary-button" type="submit">
+          Add meal option
+        </button>
+      </form>
+    </section>
+
+    <section class="form-card portal-panel portal-panel-wide">
+      <div class="section-heading">
         <div>
-          <p class="eyebrow">What makes it different</p>
-          <h2>Check the whole table, not one product at a time.</h2>
+          <h2>Meal options</h2>
+          <p>
+            Published options are visible to event members.
+          </p>
+        </div>
+      </div>
+
+      <div id="host-meal-options-list" class="meal-options-list">
+        <p>No meal options have been added yet.</p>
+      </div>
+    </section>
+
+    <section id="menu-coverage-panel" class="form-card portal-panel portal-panel-wide menu-coverage-panel" aria-labelledby="menu-coverage-heading">
+      <div class="coverage-panel-heading">
+        <div>
+          <p class="eyebrow">Plan the next menu change</p>
+          <h2 id="menu-coverage-heading">Menu coverage</h2>
+        </div>
+        <button id="refresh-menu-analysis-button" class="secondary-button" type="button">Refresh analysis</button>
+      </div>
+      <p>Coverage counts guest members, excluding the host. Analysis refreshes after host changes and every 30 seconds while this portal is visible.</p>
+      <p id="menu-coverage-message" class="coverage-message" role="status" aria-live="polite">ℹ Loading menu analysis…</p>
+
+      <div id="menu-coverage-results" hidden>
+        <p id="menu-coverage-result" class="coverage-result"></p>
+        <p id="menu-coverage-status" class="coverage-status"></p>
+        <label id="menu-coverage-percent" for="menu-coverage-progress"></label>
+        <progress id="menu-coverage-progress" max="100" value="0" aria-describedby="menu-coverage-disclaimer"></progress>
+        <dl class="coverage-metrics">
+          <div><dt>Completed profiles</dt><dd id="menu-profiled-count">0</dd></div>
+          <div><dt>Currently covered</dt><dd id="menu-covered-count">0</dd></div>
+          <div><dt>Currently uncovered</dt><dd id="menu-uncovered-count">0</dd></div>
+        </dl>
+        <p id="menu-missing-profiles"></p>
+        <p id="menu-published-count"></p>
+        <p id="menu-coverage-disclaimer"></p>
+
+        <div class="coverage-allergens">
+          <h3>Allergens limiting current options</h3>
+          <p>Counts show uncovered members with a known or possible exact allergen match in at least one published meal. Members may appear under several allergens; removing one match may not resolve their other blockers.</p>
+          <ul id="menu-blocking-allergens"></ul>
+        </div>
+        <div id="menu-blacklist-conflicts" class="coverage-blacklist" hidden>
+          <h3>⊗ Event blacklist conflicts</h3>
+          <p>These published meals match the event food blacklist. Removing an allergen label does not resolve these conflicts or produce an estimated gain.</p>
+          <ul id="menu-blacklist-list"></ul>
         </div>
 
-        <p>
-          TableForAll looks across every guest and every dish. It can
-          recommend the smallest changes needed to improve menu coverage
-          while keeping unclear information visible.
-        </p>
+        <h3>Ranked suggested actions</h3>
+        <p>Higher conditional gains rank first. For equal gains, reviews of a single allergen in an existing meal come before a new option. Missing-information reviews have no estimated gain.</p>
+        <p id="menu-estimate-note"></p>
+        <ol id="menu-optimization-suggestions" class="coverage-suggestions"></ol>
+        <p id="menu-no-suggestions" hidden></p>
+        <p id="menu-analysis-updated" class="coverage-updated"></p>
+      </div>
+    </section>
+
+    <section class="form-card portal-panel portal-panel-wide">
+      <div class="section-heading">
+        <div>
+          <h2>Event members</h2>
+          <p>
+            Members will appear here after joining with the event code.
+          </p>
+        </div>
+
+        <span id="host-member-count" class="count-badge">
+          1 member
+        </span>
+      </div>
+
+      <div id="host-members-list" class="members-list">
+        <p>No members have joined yet.</p>
+      </div>
+    </section>
+
+    <section class="form-card portal-panel portal-panel-wide room-chat" aria-labelledby="host-chat-heading">
+      <h2 id="host-chat-heading">Room chat</h2>
+      <p id="host-chat-status" class="chat-status" role="status">Connecting to room chat…</p>
+      <div id="host-chat-messages" class="chat-messages" aria-label="Recent room messages">
+        <p class="chat-empty">No messages yet. Start the conversation.</p>
+      </div>
+      <p id="host-chat-live" class="visually-hidden" aria-live="polite" aria-atomic="true"></p>
+      <form id="host-chat-form" class="chat-form">
+        <label for="host-chat-input">Message everyone in this event</label>
+        <textarea id="host-chat-input" name="message" rows="3" maxlength="1000" required></textarea>
+        <div class="chat-form-footer">
+          <span>Maximum 1,000 characters</span>
+          <button class="primary-button" type="submit">Send</button>
+        </div>
+      </form>
+    </section>
+  </div>
+</section>
+
+      <section id="member-portal-view" class="app-view member-portal hidden" aria-labelledby="member-event-heading">
+        <div class="member-portal-heading">
+          <div>
+            <p class="eyebrow">Member portal</p>
+            <h1 id="member-event-heading">Your event</h1>
+            <p id="member-event-description"></p>
+            <p id="member-event-date"></p>
+          </div>
+          <aside class="form-card member-code-card" aria-label="Event join code">
+            <span>Join code</span>
+            <strong id="member-event-code">------</strong>
+          </aside>
+        </div>
+
+        <p id="member-portal-message" class="form-message" role="status" aria-live="polite" hidden></p>
+
+        <section class="form-card member-profile-panel" aria-labelledby="member-profile-heading">
+          <div class="member-panel-heading">
+            <h2 id="member-profile-heading">Your allergy profile</h2>
+            <button id="edit-member-profile-button" class="secondary-button" type="button" hidden>Edit profile</button>
+          </div>
+          <div id="member-profile-summary" hidden></div>
+
+          <form id="member-profile-form">
+            <p>Complete your profile to review the published meals. Leave the allergy boxes empty if you have no listed allergies. Your profile and note are shared with the host.</p>
+            <fieldset class="allergen-fieldset">
+              <legend>Your allergies</legend>
+              <div class="allergen-options">
+                <label><input type="checkbox" name="allergies" value="peanuts" /> Peanuts</label>
+                <label><input type="checkbox" name="allergies" value="tree nuts" /> Tree nuts</label>
+                <label><input type="checkbox" name="allergies" value="milk" /> Milk</label>
+                <label><input type="checkbox" name="allergies" value="eggs" /> Eggs</label>
+                <label><input type="checkbox" name="allergies" value="wheat" /> Wheat</label>
+                <label><input type="checkbox" name="allergies" value="soy" /> Soy</label>
+                <label><input type="checkbox" name="allergies" value="sesame" /> Sesame</label>
+                <label><input type="checkbox" name="allergies" value="fish" /> Fish</label>
+                <label><input type="checkbox" name="allergies" value="shellfish" /> Shellfish</label>
+              </div>
+            </fieldset>
+            <div class="form-group">
+              <label for="member-other-allergies">Other allergies</label>
+              <input id="member-other-allergies" name="otherAllergies" type="text" maxlength="1000" placeholder="For example: kiwi, mustard" aria-describedby="other-allergies-help" />
+              <p id="other-allergies-help">Separate names with commas. Comparisons use exact names, ignoring case and extra spaces; synonyms are not automatically matched.</p>
+            </div>
+            <label class="member-checkbox-label">
+              <input type="checkbox" name="crossContactConcern" />
+              I am concerned about cross-contact during preparation
+            </label>
+            <div class="form-group">
+              <label for="member-host-note">Optional note for the host</label>
+              <textarea id="member-host-note" name="note" rows="3" maxlength="500" placeholder="Anything you would like to discuss with the host."></textarea>
+              <p>Notes are shown to the host and are not used to calculate meal results. List allergies in the fields above.</p>
+            </div>
+            <div class="member-form-actions">
+              <button class="primary-button" type="submit">Save allergy profile</button>
+              <button id="cancel-member-profile-button" class="secondary-button" type="button" hidden>Cancel</button>
+            </div>
+          </form>
+        </section>
+
+        <section id="member-meals-panel" class="member-meals-panel" aria-labelledby="member-meals-heading" hidden>
+          <div class="member-panel-heading">
+            <div>
+              <p class="eyebrow">Based on your saved profile</p>
+              <h2 id="member-meals-heading">Published meal options</h2>
+            </div>
+            <button id="refresh-member-meals-button" class="secondary-button" type="button">Refresh meal options</button>
+          </div>
+          <p id="member-food-blacklist"></p>
+          <p>Results compare exact names entered by participants. Missing information stays marked for review. “No listed conflict” does not mean allergy-safe.</p>
+          <div id="member-meal-options-list" class="member-meal-options-list"></div>
+        </section>
+
+        <section class="form-card assistant-panel" aria-labelledby="assistant-heading">
+          <p class="eyebrow">Stored event information only</p>
+          <h2 id="assistant-heading">Ask TableForAll</h2>
+          <p class="assistant-safety">The deterministic meal status remains authoritative. The assistant cannot certify a meal as safe. Confirm ingredients and preparation directly with the host.</p>
+          <p id="assistant-status" role="status">Checking assistant availability…</p>
+          <div class="suggested-questions" aria-label="Suggested questions">
+            <button type="button" class="secondary-button assistant-suggestion">Which meals conflict with my listed allergies?</button>
+            <button type="button" class="secondary-button assistant-suggestion">What should I ask the host about the cheesecake?</button>
+            <button type="button" class="secondary-button assistant-suggestion">Which meals have incomplete information?</button>
+            <button type="button" class="secondary-button assistant-suggestion">Why was this meal marked Review needed?</button>
+          </div>
+          <div id="assistant-history" class="assistant-history" aria-label="Conversation with TableForAll">
+            <p class="assistant-empty">No assistant questions yet.</p>
+          </div>
+          <form id="assistant-form" class="assistant-form">
+            <label for="assistant-question">Your question</label>
+            <textarea id="assistant-question" name="question" rows="3" maxlength="500" required></textarea>
+            <button class="primary-button" type="submit">Ask</button>
+          </form>
+        </section>
+
+        <section class="form-card room-chat" aria-labelledby="member-chat-heading">
+          <h2 id="member-chat-heading">Room chat</h2>
+          <p id="member-chat-status" class="chat-status" role="status">Connecting to room chat…</p>
+          <div id="member-chat-messages" class="chat-messages" aria-label="Recent room messages">
+            <p class="chat-empty">No messages yet. Start the conversation.</p>
+          </div>
+          <p id="member-chat-live" class="visually-hidden" aria-live="polite" aria-atomic="true"></p>
+          <form id="member-chat-form" class="chat-form">
+            <label for="member-chat-input">Message everyone in this event</label>
+            <textarea id="member-chat-input" name="message" rows="3" maxlength="1000" required></textarea>
+            <div class="chat-form-footer">
+              <span>Maximum 1,000 characters</span>
+              <button class="primary-button" type="submit">Send</button>
+            </div>
+          </form>
+        </section>
       </section>
 
-      <aside class="safety-notice" aria-labelledby="safety-heading">
-        <h2 id="safety-heading">Important allergy notice</h2>
+      <aside class="safety-notice">
+        <h2>Important allergy notice</h2>
         <p>
-          TableForAll is a planning and communication tool. It does not
-          certify that food is safe. Guests should confirm ingredients,
-          preparation methods, and cross-contact concerns directly with
-          the person preparing the food.
+          TableForAll organizes information provided by event
+          participants. It does not certify that a food is safe.
+          Ingredients, preparation methods, and cross-contact concerns
+          still need to be confirmed directly.
         </p>
       </aside>
     </main>

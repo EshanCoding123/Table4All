@@ -274,6 +274,7 @@ p {
 
 .form-group {
   display: grid;
+  min-width: 0;
   gap: 8px;
   margin-bottom: 20px;
 }
@@ -288,12 +289,21 @@ input,
 select,
 textarea {
   width: 100%;
+  min-width: 0;
+  max-width: 100%;
   min-height: 50px;
   padding: 11px 14px;
   background: var(--surface);
   color: var(--text);
   border: 2px solid var(--border);
   border-radius: var(--radius-small);
+}
+
+input[type="date"] {
+  display: block;
+  inline-size: 100%;
+  min-inline-size: 0;
+  max-inline-size: 100%;
 }
 
 input::placeholder {
@@ -349,6 +359,10 @@ textarea:focus {
 .secondary-button:hover {
   background: var(--accent-yellow);
   border-color: var(--text);
+}
+
+.back-button {
+  margin-top: 18px;
 }
 
 .primary-button:active,
@@ -1097,9 +1111,14 @@ footer p {
 
 @media (max-width: 700px) {
   .site-header {
-    align-items: flex-start;
+    align-items: center;
     flex-direction: column;
-    padding: 20px 0;
+    padding: 20px;
+    text-align: center;
+  }
+
+  .site-header .secondary-button {
+    align-self: center;
   }
 
   .site-header nav {
@@ -1151,12 +1170,13 @@ footer p {
 
   .site-header nav {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: center;
     gap: 4px;
   }
 
   .site-header nav a {
     width: 100%;
+    justify-content: center;
   }
 }
 

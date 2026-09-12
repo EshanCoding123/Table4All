@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0"
+    />
+    <meta
+      name="description"
+      content="Plan shared meals around guests' food allergies."
+    />
+
+    <title>TableForAll</title>
+
+    <link rel="stylesheet" href="styles.css" />
+    <script src="app.js" defer></script>
+  </head>
+
+  <body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+
+    <header class="site-header">
+      <a class="logo" href="/" aria-label="TableForAll home">
+        TableForAll
+      </a>
+
+      <nav aria-label="Main navigation">
+        <a href="#how-it-works">How it works</a>
+        <a href="#about">About</a>
+      </nav>
+    </header>
+
+    <main id="main-content">
+      <section class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">Food allergy planning for shared meals</p>
+
+          <h1>Plan a meal that includes everyone.</h1>
+
+          <p class="hero-description">
+            Collect allergy information, check every dish, and find the
+            smallest menu changes needed to give every guest more options.
+          </p>
+
+          <button class="secondary-button" id="demo-event-button" type="button">
+            Try a sample event
+          </button>
+        </div>
+
+        <div class="event-actions">
+          <section class="form-card" aria-labelledby="create-heading">
+            <h2 id="create-heading">Create an event</h2>
+
+            <form id="create-event-form">
+              <div class="form-group">
+                <label for="event-name">Event name</label>
+                <input
+                  id="event-name"
+                  name="eventName"
+                  type="text"
+                  maxlength="80"
+                  placeholder="Sunday dinner"
+                  required
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="host-name">Your name</label>
+                <input
+                  id="host-name"
+                  name="hostName"
+                  type="text"
+                  maxlength="50"
+                  placeholder="Rohan"
+                  required
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="event-type">Type of meal</label>
+                <select id="event-type" name="eventType">
+                  <option value="potluck">Potluck</option>
+                  <option value="dinner">Dinner</option>
+                  <option value="party">Party</option>
+                  <option value="club-event">Club event</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="event-date">Date</label>
+                <input
+                  id="event-date"
+                  name="eventDate"
+                  type="date"
+                  required
+                />
+              </div>
+
+              <button class="primary-button" type="submit">
+                Create shared table
+              </button>
+            </form>
+          </section>
+
+          <section class="form-card join-card" aria-labelledby="join-heading">
+            <h2 id="join-heading">Join an event</h2>
+
+            <p>Enter the six-character code sent by the host.</p>
+
+            <form id="join-event-form">
+              <div class="form-group">
+                <label for="guest-name">Your name</label>
+                <input
+                  id="guest-name"
+                  name="guestName"
+                  type="text"
+                  maxlength="50"
+                  required
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="event-code">Event code</label>
+                <input
+                  id="event-code"
+                  name="eventCode"
+                  type="text"
+                  minlength="6"
+                  maxlength="6"
+                  autocomplete="off"
+                  spellcheck="false"
+                  required
+                />
+              </div>
+
+              <button class="primary-button" type="submit">
+                Join event
+              </button>
+            </form>
+          </section>
+        </div>
+      </section>
+
+      <p
+        class="form-message"
+        id="form-message"
+        role="status"
+        aria-live="polite"
+      ></p>
+
+      <section class="how-it-works" id="how-it-works">
+        <div class="section-heading">
+          <p class="eyebrow">How it works</p>
+          <h2>One shared plan, with fewer unanswered questions.</h2>
+        </div>
+
+        <div class="steps">
+          <article class="step-card">
+            <span class="step-number" aria-hidden="true">1</span>
+            <h3>Guests add their needs</h3>
+            <p>
+              Each guest privately records the food allergens they need
+              to avoid.
+            </p>
+          </article>
+
+          <article class="step-card">
+            <span class="step-number" aria-hidden="true">2</span>
+            <h3>Everyone adds dishes</h3>
+            <p>
+              Contributors provide ingredients, allergen statements, and
+              preparation information.
+            </p>
+          </article>
+
+          <article class="step-card">
+            <span class="step-number" aria-hidden="true">3</span>
+            <h3>The menu is checked</h3>
+            <p>
+              TableForAll finds conflicts, missing details, and guests who
+              may need additional choices.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="about-section" id="about">
+        <div>
+          <p class="eyebrow">What makes it different</p>
+          <h2>Check the whole table, not one product at a time.</h2>
+        </div>
+
+        <p>
+          TableForAll looks across every guest and every dish. It can
+          recommend the smallest changes needed to improve menu coverage
+          while keeping unclear information visible.
+        </p>
+      </section>
+
+      <aside class="safety-notice" aria-labelledby="safety-heading">
+        <h2 id="safety-heading">Important allergy notice</h2>
+        <p>
+          TableForAll is a planning and communication tool. It does not
+          certify that food is safe. Guests should confirm ingredients,
+          preparation methods, and cross-contact concerns directly with
+          the person preparing the food.
+        </p>
+      </aside>
+    </main>
+
+    <footer>
+      <p>&copy; 2026 TableForAll</p>
+    </footer>
+  </body>
+</html>

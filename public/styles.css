@@ -202,6 +202,24 @@ main {
   padding-top: 28px;
 }
 
+#account-view {
+  gap: clamp(18px, 3vw, 36px);
+}
+
+#account-view .hero-copy {
+  margin-inline: auto;
+  text-align: center;
+}
+
+#account-view .event-actions {
+  width: min(100%, 420px);
+  justify-self: center;
+}
+
+#account-view .form-card {
+  text-align: center;
+}
+
 .eyebrow {
   display: inline-block;
   margin: 0 0 14px;

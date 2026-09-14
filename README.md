@@ -1,4 +1,5 @@
 # TableForAll
+ACCESS WEB APP HERE: https://table4all.onrender.com/
 
 TableForAll is an Express and MongoDB application for planning event meals around guests' self-reported allergy information. It includes verified host and member sessions, deterministic meal reviews, menu coverage analysis, event room chat, and an optional member meal-information assistant.
 
